@@ -14,17 +14,17 @@ class BranchResource extends Resource
 {
     protected static ?string $model = Branch::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office';
-
     protected static ?string $navigationGroup = 'Administración';
 
-    protected static ?int $navigationSort = 3;
+    protected static ?int $navigationSort = 4;
 
     protected static ?string $navigationLabel = 'Sucursales';
 
     protected static ?string $modelLabel = 'Sucursal';
 
     protected static ?string $pluralModelLabel = 'Sucursales';
+
+    protected static ?string $navigationIcon = 'heroicon-o-building-office';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -94,7 +94,6 @@ class BranchResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

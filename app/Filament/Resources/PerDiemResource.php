@@ -14,15 +14,17 @@ class PerDiemResource extends Resource
 {
     protected static ?string $model = PerDiem::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+    protected static ?string $navigationGroup = 'Configuración de Gastos';
 
-    protected static ?string $navigationLabel = 'Viáticos';
+    protected static ?int $navigationSort = 3;
+
+    protected static ?string $navigationLabel = 'Viáticos Per Diem';
 
     protected static ?string $modelLabel = 'Viático';
 
     protected static ?string $pluralModelLabel = 'Viáticos';
 
-    protected static ?int $navigationSort = 60;
+    protected static ?string $navigationIcon = 'heroicon-o-currency-dollar';
 
     public static function form(Form $form): Form
     {
@@ -34,6 +36,7 @@ class PerDiemResource extends Resource
                             ->label('Posición')
                             ->relationship('position', 'name')
                             ->searchable()
+                            ->preload()
                             ->required()
                             ->helperText('Posición laboral a la que aplica este viático'),
 
@@ -41,6 +44,7 @@ class PerDiemResource extends Resource
                             ->label('Detalle de Gasto')
                             ->relationship('detail', 'name')
                             ->searchable()
+                            ->preload()
                             ->required()
                             ->helperText('Detalle específico de gasto asociado'),
 
@@ -189,10 +193,7 @@ class PerDiemResource extends Resource
                     ->query(fn ($query) => $query->future()),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->color('gray'),
-                Tables\Actions\DeleteAction::make()
-                    ->color('danger'),
+                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

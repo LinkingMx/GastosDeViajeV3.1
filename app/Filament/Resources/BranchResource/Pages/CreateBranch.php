@@ -17,9 +17,18 @@ class CreateBranch extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Sucursal creada correctamente')
             ->icon('heroicon-o-building-storefront')
-            ->body('La sucursal ha sido registrada y guardada exitosamente.')
-            ->success();
+            ->title('Sucursal creada correctamente')
+            ->body('La sucursal ha sido registrada y guardada exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nueva sucursal';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

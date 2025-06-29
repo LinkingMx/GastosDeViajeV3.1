@@ -14,11 +14,9 @@ class CountryResource extends Resource
 {
     protected static ?string $model = Country::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-globe-americas';
+    protected static ?string $navigationGroup = 'Catálogos';
 
-    protected static ?string $navigationGroup = 'Administración';
-
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Países';
 
@@ -27,6 +25,8 @@ class CountryResource extends Resource
     protected static ?string $pluralModelLabel = 'Países';
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    protected static ?string $navigationIcon = 'heroicon-o-globe-americas';
 
     public static function form(Form $form): Form
     {
@@ -78,6 +78,11 @@ class CountryResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\BadgeColumn::make('name')
+                    ->label('Nombre')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('iso2')
                     ->label('ISO2')
                     ->searchable()
@@ -88,12 +93,7 @@ class CountryResource extends Resource
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('name')
-                    ->label('Nombre')
-                    ->searchable()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('default_currency')
+                Tables\Columns\BadgeColumn::make('default_currency')
                     ->label('Moneda')
                     ->searchable()
                     ->placeholder('Sin moneda'),
@@ -125,7 +125,6 @@ class CountryResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

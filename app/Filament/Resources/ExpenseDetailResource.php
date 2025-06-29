@@ -16,7 +16,7 @@ class ExpenseDetailResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-list-bullet';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Configuración de Gastos';
 
     protected static ?int $navigationSort = 2;
 
@@ -65,7 +65,7 @@ class ExpenseDetailResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('concept.name')
+                Tables\Columns\BadgeColumn::make('concept.name')
                     ->label('Concepto')
                     ->searchable()
                     ->sortable(),
@@ -110,7 +110,6 @@ class ExpenseDetailResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

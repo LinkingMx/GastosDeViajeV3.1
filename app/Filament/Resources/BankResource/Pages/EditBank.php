@@ -25,9 +25,8 @@ class EditBank extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Banco actualizado correctamente')
             ->icon('heroicon-o-banknotes')
-            ->body('Los datos del banco han sido actualizados exitosamente.')
-            ->success();
+            ->title('Banco actualizado correctamente')
+            ->body('Los datos del banco han sido actualizados exitosamente.');
     }
 }

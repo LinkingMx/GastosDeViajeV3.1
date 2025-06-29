@@ -29,13 +29,26 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->brandLogo(fn () => view('filament.admin.logo'))
+            ->font('Raleway')
             ->colors([
-                'danger' => Color::Rose,
-                'gray' => Color::Gray,
+                'primary' => [
+                    '50' => '#f8f5f1',
+                    '100' => '#ece6db',
+                    '200' => '#d9cebf',
+                    '300' => '#c5b6a3',
+                    '400' => '#b29e87',
+                    '500' => '#a28a70', // Un tono ligeramente más saturado que el base
+                    '600' => '#857157', // Tu color base
+                    '700' => '#6e5d48',
+                    '800' => '#57493a',
+                    '900' => '#40352b',
+                    '950' => '#29221c',
+                ],
+                'danger' => Color::Red,
+                'gray' => Color::Zinc,
                 'info' => Color::Blue,
-                'primary' => Color::Gray,
-                'success' => Color::Emerald,
-                'warning' => Color::Orange,
+                'success' => Color::Green,
+                'warning' => Color::Amber,
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')

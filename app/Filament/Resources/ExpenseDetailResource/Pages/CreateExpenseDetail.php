@@ -17,9 +17,18 @@ class CreateExpenseDetail extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Detalle creado correctamente')
             ->icon('heroicon-o-list-bullet')
-            ->body('El detalle de gasto ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('Detalle creado correctamente')
+            ->body('El detalle de gasto ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo detalle';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

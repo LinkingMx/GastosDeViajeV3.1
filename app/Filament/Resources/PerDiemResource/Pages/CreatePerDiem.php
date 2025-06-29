@@ -22,9 +22,18 @@ class CreatePerDiem extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Viático creado correctamente')
             ->icon('heroicon-o-currency-dollar')
-            ->body('El viático ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('Viático creado correctamente')
+            ->body('El viático ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo viático';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

@@ -17,9 +17,18 @@ class CreateDepartment extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Departamento creado correctamente')
             ->icon('heroicon-o-building-office')
-            ->body('El departamento ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('Departamento creado correctamente')
+            ->body('El departamento ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo departamento';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

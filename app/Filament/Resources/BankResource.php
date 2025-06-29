@@ -14,11 +14,11 @@ class BankResource extends Resource
 {
     protected static ?string $model = Bank::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-library';
+    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
 
-    protected static ?string $navigationGroup = 'Administración';
+    protected static ?string $navigationGroup = 'Catálogos';
 
-    protected static ?int $navigationSort = 2;
+    protected static ?int $navigationSort = 1;
 
     protected static ?string $navigationLabel = 'Bancos';
 
@@ -57,17 +57,17 @@ class BankResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('code')
-                    ->label('Código')
-                    ->searchable()
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('name')
+                Tables\Columns\BadgeColumn::make('name')
                     ->label('Nombre')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('users_count')
+                Tables\Columns\BadgeColumn::make('code')
+                    ->label('Código')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\BadgeColumn::make('users_count')
                     ->label('Usuarios')
                     ->counts('users')
                     ->sortable(),
@@ -83,7 +83,6 @@ class BankResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

@@ -22,9 +22,18 @@ class CreatePosition extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Posición creada correctamente')
             ->icon('heroicon-o-briefcase')
-            ->body('La posición ha sido registrada y guardada exitosamente.')
-            ->success();
+            ->title('Posición creada correctamente')
+            ->body('La posición ha sido registrada y guardada exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nueva posición';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

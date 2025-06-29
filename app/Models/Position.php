@@ -33,14 +33,6 @@ class Position extends Model
     }
 
     /**
-     * Mutator para name: Convierte a mayúsculas
-     */
-    public function setNameAttribute($value)
-    {
-        $this->attributes['name'] = strtoupper($value);
-    }
-
-    /**
      * Get all employees that have this position.
      */
     public function employees()

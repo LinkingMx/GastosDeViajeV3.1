@@ -14,17 +14,17 @@ class DepartmentResource extends Resource
 {
     protected static ?string $model = Department::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
-
     protected static ?string $navigationGroup = 'Administración';
 
-    protected static ?int $navigationSort = 5;
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Departamentos';
 
     protected static ?string $modelLabel = 'Departamento';
 
     protected static ?string $pluralModelLabel = 'Departamentos';
+
+    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -102,7 +102,6 @@ class DepartmentResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

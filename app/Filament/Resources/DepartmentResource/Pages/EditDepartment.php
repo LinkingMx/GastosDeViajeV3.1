@@ -25,9 +25,8 @@ class EditDepartment extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Departamento actualizado correctamente')
             ->icon('heroicon-o-building-office')
-            ->body('Los datos del departamento han sido actualizados exitosamente.')
-            ->success();
+            ->title('Departamento actualizado correctamente')
+            ->body('Los datos del departamento han sido actualizados exitosamente.');
     }
 }

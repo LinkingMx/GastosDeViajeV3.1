@@ -31,9 +31,8 @@ class EditPerDiem extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Viático actualizado correctamente')
             ->icon('heroicon-o-currency-dollar')
-            ->body('Los datos del viático han sido actualizados exitosamente.')
-            ->success();
+            ->title('Viático actualizado correctamente')
+            ->body('Los datos del viático han sido actualizados exitosamente.');
     }
 }

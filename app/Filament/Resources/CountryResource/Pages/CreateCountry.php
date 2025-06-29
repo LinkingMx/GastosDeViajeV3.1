@@ -17,9 +17,18 @@ class CreateCountry extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('País creado correctamente')
             ->icon('heroicon-o-globe-alt')
-            ->body('El país ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('País creado correctamente')
+            ->body('El país ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo país';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

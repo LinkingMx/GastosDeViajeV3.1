@@ -25,9 +25,8 @@ class EditExpenseDetail extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Detalle actualizado correctamente')
             ->icon('heroicon-o-list-bullet')
-            ->body('Los datos del detalle de gasto han sido actualizados exitosamente.')
-            ->success();
+            ->title('Detalle actualizado correctamente')
+            ->body('Los datos del detalle de gasto han sido actualizados exitosamente.');
     }
 }

@@ -16,8 +16,6 @@ class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-users';
-
     protected static ?string $navigationGroup = 'Administración';
 
     protected static ?int $navigationSort = 1;
@@ -28,6 +26,8 @@ class UserResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Usuarios';
 
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Form $form): Form
@@ -35,20 +35,31 @@ class UserResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('Información Personal')
+                    ->columns(2)
                     ->schema([
-                        Forms\Components\Grid::make(2)
-                            ->schema([
-                                Forms\Components\TextInput::make('name')
-                                    ->label('Nombre Completo')
-                                    ->required()
-                                    ->maxLength(255),
+                        Forms\Components\TextInput::make('name')
+                            ->label('Nombre Completo')
+                            ->placeholder('Ej. Juan Pérez')
+                            ->required()
+                            ->maxLength(255)
+                            ->columnSpan(1),
 
-                                Forms\Components\TextInput::make('email')
-                                    ->label('Correo Electrónico')
-                                    ->email()
-                                    ->required()
-                                    ->unique(ignoreRecord: true),
-                            ]),
+                        Forms\Components\TextInput::make('email')
+                            ->label('Correo Electrónico')
+                            ->placeholder('usuario@empresa.com')
+                            ->email()
+                            ->required()
+                            ->unique(ignoreRecord: true)
+                            ->columnSpan(1),
+
+                        Forms\Components\Select::make('roles')
+                            ->label('Rol')
+                            ->multiple()
+                            ->relationship('roles', 'name')
+                            ->preload()
+                            ->required()
+                            ->helperText('Selecciona uno o más roles para el usuario.')
+                            ->columnSpanFull(),
 
                         Forms\Components\Grid::make(2)
                             ->schema([
@@ -173,7 +184,8 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\TextColumn::make('department.name')
                     ->label('Departamento')
@@ -188,7 +200,7 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('bank.name')
                     ->label('Banco')
                     ->searchable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
                 Tables\Columns\IconColumn::make('override_authorization')
                     ->label('Autorización Especial')
@@ -222,7 +234,6 @@ class UserResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

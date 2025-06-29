@@ -17,9 +17,18 @@ class CreateBank extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Banco creado correctamente')
             ->icon('heroicon-o-banknotes')
-            ->body('El banco ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('Banco creado correctamente')
+            ->body('El banco ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo banco';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

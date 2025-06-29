@@ -25,9 +25,8 @@ class EditBranch extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Sucursal actualizada correctamente')
             ->icon('heroicon-o-building-storefront')
-            ->body('Los datos de la sucursal han sido actualizados exitosamente.')
-            ->success();
+            ->title('Sucursal actualizada correctamente')
+            ->body('Los datos de la sucursal han sido actualizados exitosamente.');
     }
 }

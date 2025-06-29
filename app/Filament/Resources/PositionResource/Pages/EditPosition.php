@@ -31,9 +31,8 @@ class EditPosition extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Posición actualizada correctamente')
             ->icon('heroicon-o-briefcase')
-            ->body('Los datos de la posición han sido actualizados exitosamente.')
-            ->success();
+            ->title('Posición actualizada correctamente')
+            ->body('Los datos de la posición han sido actualizados exitosamente.');
     }
 }

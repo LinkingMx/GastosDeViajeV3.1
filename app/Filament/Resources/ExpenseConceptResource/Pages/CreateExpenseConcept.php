@@ -17,9 +17,18 @@ class CreateExpenseConcept extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Concepto creado correctamente')
             ->icon('heroicon-o-clipboard-document-list')
-            ->body('El concepto de gasto ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('Concepto creado correctamente')
+            ->body('El concepto de gasto ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo concepto';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

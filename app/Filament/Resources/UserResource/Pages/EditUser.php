@@ -25,9 +25,8 @@ class EditUser extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Usuario actualizado correctamente')
             ->icon('heroicon-o-user')
-            ->body('Los datos del usuario han sido actualizados exitosamente.')
-            ->success();
+            ->title('Usuario actualizado')
+            ->body('Los datos del usuario han sido actualizados exitosamente.');
     }
 }

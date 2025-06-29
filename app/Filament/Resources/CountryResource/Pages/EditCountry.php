@@ -25,9 +25,8 @@ class EditCountry extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('País actualizado correctamente')
             ->icon('heroicon-o-globe-alt')
-            ->body('Los datos del país han sido actualizados exitosamente.')
-            ->success();
+            ->title('País actualizado correctamente')
+            ->body('Los datos del país han sido actualizados exitosamente.');
     }
 }

@@ -17,9 +17,18 @@ class CreateUser extends CreateRecord
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Usuario creado correctamente')
             ->icon('heroicon-o-user-plus')
-            ->body('El usuario ha sido registrado y guardado exitosamente.')
-            ->success();
+            ->title('Usuario creado')
+            ->body('El usuario ha sido registrado y guardado exitosamente.');
+    }
+
+    public static function getCreateButtonLabel(): string
+    {
+        return 'Nuevo usuario';
+    }
+
+    public static function getCreateButtonIcon(): ?string
+    {
+        return 'heroicon-o-plus';
     }
 }

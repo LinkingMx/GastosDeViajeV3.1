@@ -25,9 +25,8 @@ class EditExpenseConcept extends EditRecord
     protected function getSavedNotification(): ?\Filament\Notifications\Notification
     {
         return \Filament\Notifications\Notification::make()
-            ->title('Concepto actualizado correctamente')
             ->icon('heroicon-o-clipboard-document-list')
-            ->body('Los datos del concepto de gasto han sido actualizados exitosamente.')
-            ->success();
+            ->title('Concepto actualizado correctamente')
+            ->body('Los datos del concepto de gasto han sido actualizados exitosamente.');
     }
 }

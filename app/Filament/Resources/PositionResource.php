@@ -14,7 +14,9 @@ class PositionResource extends Resource
 {
     protected static ?string $model = Position::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-briefcase';
+    protected static ?string $navigationGroup = 'Administración';
+
+    protected static ?int $navigationSort = 3;
 
     protected static ?string $navigationLabel = 'Posiciones';
 
@@ -22,7 +24,7 @@ class PositionResource extends Resource
 
     protected static ?string $pluralModelLabel = 'Posiciones';
 
-    protected static ?int $navigationSort = 30;
+    protected static ?string $navigationIcon = 'heroicon-o-briefcase';
 
     public static function form(Form $form): Form
     {
@@ -138,14 +140,7 @@ class PositionResource extends Resource
                 ->query(fn ($query) => $query->whereDoesntHave('perDiems')),
         ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->color('gray'),
-                Tables\Actions\DeleteAction::make()
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Eliminar Posición')
-                    ->modalDescription('¿Estás seguro de que deseas eliminar esta posición? Esta acción no se puede deshacer.')
-                    ->modalSubmitActionLabel('Sí, eliminar'),
+                Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
