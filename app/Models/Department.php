@@ -42,6 +42,14 @@ class Department extends Model
     }
 
     /**
+     * Alias for the authorizer relationship (for clarity in code)
+     */
+    public function defaultAuthorizer()
+    {
+        return $this->authorizer();
+    }
+
+    /**
      * Get all users that belong to this department.
      */
     public function users()

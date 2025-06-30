@@ -36,7 +36,7 @@ class ExpenseDetailResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('concept_id')
                             ->label('Concepto de Gasto')
-                            ->relationship('concept', 'name')
+                            ->relationship('concept', 'name', fn ($query) => $query->where('is_unmanaged', true))
                             ->searchable()
                             ->preload()
                             ->required()
@@ -57,6 +57,13 @@ class ExpenseDetailResource extends Resource
                             ->label('Activo')
                             ->default(true)
                             ->helperText('Los detalles inactivos no aparecerán en los formularios de gastos'),
+
+                        Forms\Components\TextInput::make('priority')
+                            ->label('Prioridad')
+                            ->numeric()
+                            ->default(0)
+                            ->helperText('Entre mayor el número, mayor la prioridad en la solicitud de viaje.')
+                            ->required(),
                     ]),
             ]);
     }
@@ -90,6 +97,10 @@ class ExpenseDetailResource extends Resource
                     ->date()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
+                Tables\Columns\TextColumn::make('priority')
+                    ->label('Prioridad')
+                    ->sortable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('concept_id')
@@ -116,7 +127,7 @@ class ExpenseDetailResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
-            ->defaultSort('concept.name', 'asc');
+            ->defaultSort('priority', 'desc');
     }
 
     public static function getRelations(): array

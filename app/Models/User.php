@@ -97,6 +97,20 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the authorizer for this user.
+     * If override_authorization is true, use override_authorizer_id
+     * Otherwise, use the department's default authorizer
+     */
+    public function getAuthorizerAttribute()
+    {
+        if ($this->override_authorization && $this->override_authorizer_id) {
+            return $this->overrideAuthorizer;
+        }
+
+        return $this->department?->defaultAuthorizer;
+    }
+
+    /**
      * Mutator para RFC: Convierte a mayúsculas y limpia el formato
      */
     public function setRfcAttribute($value)

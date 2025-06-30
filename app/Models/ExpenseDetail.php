@@ -20,6 +20,7 @@ class ExpenseDetail extends Model
         'name',
         'description',
         'is_active',
+        'priority', // Nuevo campo para prioridad
     ];
 
     /**

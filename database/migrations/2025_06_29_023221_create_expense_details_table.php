@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name')->unique()->comment('Nombre único del detalle');
             $table->text('description')->nullable()->comment('Descripción opcional del detalle');
             $table->boolean('is_active')->default(true)->comment('Si está actualmente habilitado');
+            $table->integer('priority')->default(0)->comment('Prioridad para ordenamiento, mayor valor = mayor prioridad');
             $table->timestamps();
 
             // Foreign key constraints

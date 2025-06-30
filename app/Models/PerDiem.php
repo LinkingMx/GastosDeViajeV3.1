@@ -136,6 +136,14 @@ class PerDiem extends Model
     }
 
     /**
+     * Get the expense concept through the expense detail.
+     */
+    public function expenseConcept()
+    {
+        return $this->hasOneThrough(ExpenseConcept::class, ExpenseDetail::class, 'id', 'id', 'detail_id', 'concept_id');
+    }
+
+    /**
      * Scope to get current per diems (valid today).
      */
     public function scopeCurrent($query)
