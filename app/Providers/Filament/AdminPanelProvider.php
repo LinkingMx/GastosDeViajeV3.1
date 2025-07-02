@@ -38,7 +38,7 @@ class AdminPanelProvider extends PanelProvider
                     '300' => '#c5b6a3',
                     '400' => '#b29e87',
                     '500' => '#a28a70', // Un tono ligeramente más saturado que el base
-                    '600' => '#857157', // Tu color base
+                    '600' => '#857151', // Tu color base
                     '700' => '#6e5d48',
                     '800' => '#57493a',
                     '900' => '#40352b',
@@ -53,12 +53,17 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
-                Pages\Dashboard::class,
+                // Pages\Dashboard::class, // Dashboard eliminado
             ])
+            ->spa() // Activar SPA para mejor experiencia
+            ->homeUrl('/admin/travel-requests') // Redirección directa a solicitudes de viajes
+            ->sidebarCollapsibleOnDesktop() // Sidebar colapsable para mejor UX
+            ->breadcrumbs(false) // Simplificar navegación
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
+                // Widgets del dashboard eliminados para mejorar rendimiento
+                // Widgets\AccountWidget::class,
+                // Widgets\FilamentInfoWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

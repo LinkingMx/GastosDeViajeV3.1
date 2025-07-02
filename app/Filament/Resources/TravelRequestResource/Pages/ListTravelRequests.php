@@ -23,8 +23,7 @@ class ListTravelRequests extends ListRecords
     public function getTabs(): array
     {
         $user = auth()->user();
-
-        return [
+        $tabs = [
             'all' => Tab::make('Todas las Visibles')
                 ->icon('heroicon-o-eye')
                 ->badge($this->getTabBadgeCount('all')),
@@ -51,6 +50,26 @@ class ListTravelRequests extends ListRecords
                 })
                 ->badge($this->getTabBadgeCount('my_authorizations')),
         ];
+
+        // Agregar tabs específicos para el equipo de viajes
+        if ($user->isTravelTeamMember()) {
+            $tabs['travel_pending'] = Tab::make('Pendientes de Viajes')
+                ->icon('heroicon-o-clock')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'travel_review'))
+                ->badge($this->getTabBadgeCount('travel_pending'));
+
+            $tabs['travel_reviewed'] = Tab::make('Revisadas por Mí')
+                ->icon('heroicon-o-check-badge')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('travel_reviewed_by', $user->id))
+                ->badge($this->getTabBadgeCount('travel_reviewed'));
+
+            $tabs['travel_approved'] = Tab::make('Aprobadas Final')
+                ->icon('heroicon-o-shield-check')
+                ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'travel_approved'))
+                ->badge($this->getTabBadgeCount('travel_approved'));
+        }
+
+        return $tabs;
     }
 
     public function getDefaultActiveTab(): string|int|null
@@ -78,6 +97,12 @@ class ListTravelRequests extends ListRecords
                                     $query->where('authorizer_id', $user->id);
                                 });
                         });
+                })
+                ->orWhere(function (Builder $query) use ($user) {
+                    // Para equipo de viajes: solicitudes en revisión y revisadas
+                    if ($user->isTravelTeamMember()) {
+                        $query->whereIn('status', ['travel_review', 'travel_approved', 'travel_rejected']);
+                    }
                 });
         });
 
@@ -94,6 +119,9 @@ class ListTravelRequests extends ListRecords
                         });
                 })
                 ->count(),
+            'travel_pending' => TravelRequest::where('status', 'travel_review')->count(),
+            'travel_reviewed' => TravelRequest::where('travel_reviewed_by', $user->id)->count(),
+            'travel_approved' => TravelRequest::where('status', 'travel_approved')->count(),
             default => 0,
         };
     }

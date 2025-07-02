@@ -36,6 +36,9 @@ class TravelRequest extends Model
         'submitted_at',
         'authorized_at',
         'rejected_at',
+        'travel_reviewed_at',
+        'travel_reviewed_by',
+        'travel_review_comments',
     ];
 
     /**
@@ -66,6 +69,7 @@ class TravelRequest extends Model
         'submitted_at' => 'datetime',
         'authorized_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'travel_reviewed_at' => 'datetime',
     ];
 
     /**
@@ -82,6 +86,14 @@ class TravelRequest extends Model
     public function authorizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'authorizer_id');
+    }
+
+    /**
+     * Get the user who reviewed the travel request for the travel team.
+     */
+    public function travelReviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'travel_reviewed_by');
     }
 
     /**
@@ -133,6 +145,14 @@ class TravelRequest extends Model
     }
 
     /**
+     * Get the attachments for this travel request.
+     */
+    public function attachments()
+    {
+        return $this->hasMany(TravelRequestAttachment::class)->orderBy('created_at');
+    }
+
+    /**
      * Get the actual authorizer for this request based on user settings.
      */
     public function getActualAuthorizerAttribute()
@@ -157,6 +177,9 @@ class TravelRequest extends Model
             'approved' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
             'rejected' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
             'revision' => 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+            'travel_review' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+            'travel_approved' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+            'travel_rejected' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
             default => 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
         };
     }
@@ -172,6 +195,9 @@ class TravelRequest extends Model
             'approved' => 'Autorizada',
             'rejected' => 'Rechazada',
             'revision' => 'En Revisión',
+            'travel_review' => 'En Revisión de Viajes',
+            'travel_approved' => 'Aprobada Final',
+            'travel_rejected' => 'Rechazada por Viajes',
             default => ucfirst($this->status),
         };
     }
@@ -249,6 +275,9 @@ class TravelRequest extends Model
             'comment' => $comment ?: 'Solicitud aprobada.',
             'type' => 'approval',
         ]);
+
+        // NUEVA LÓGICA: Pasar automáticamente a revisión de viajes
+        $this->moveToTravelReview();
     }
 
     /**
@@ -285,6 +314,142 @@ class TravelRequest extends Model
             'user_id' => auth()->id(),
             'comment' => 'Solicitud puesta en revisión para realizar modificaciones y reenvío.',
             'type' => 'revision',
+        ]);
+    }
+
+    // ===============================================
+    // MÉTODOS PARA EQUIPO DE VIAJES
+    // ===============================================
+
+    /**
+     * Verifica si la solicitud está en revisión del equipo de viajes
+     */
+    public function isInTravelReview(): bool
+    {
+        return $this->status === 'travel_review';
+    }
+
+    /**
+     * Verifica si la solicitud fue aprobada por el equipo de viajes
+     */
+    public function isTravelApproved(): bool
+    {
+        return $this->status === 'travel_approved';
+    }
+
+    /**
+     * Verifica si la solicitud fue rechazada por el equipo de viajes
+     */
+    public function isTravelRejected(): bool
+    {
+        return $this->status === 'travel_rejected';
+    }
+
+    /**
+     * Verifica si el usuario puede revisar esta solicitud (debe ser del equipo de viajes)
+     */
+    public function canBeTravelReviewedBy(User $user): bool
+    {
+        return $this->status === 'travel_review' && $user->isTravelTeamMember();
+    }
+
+    /**
+     * Verificar si un usuario puede subir archivos adjuntos
+     * Solo miembros del equipo de viajes pueden subir archivos cuando está en "aprobada final"
+     */
+    public function canUploadAttachments(User $user): bool
+    {
+        return $this->status === 'travel_approved' && $user->isTravelTeamMember();
+    }
+
+    /**
+     * Mueve la solicitud automáticamente a revisión del equipo de viajes
+     * Se ejecuta cuando una solicitud es aprobada departamentalmente
+     */
+    public function moveToTravelReview(): void
+    {
+        $this->update([
+            'status' => 'travel_review',
+        ]);
+
+        // Crear comentario automático
+        $this->comments()->create([
+            'user_id' => null, // Sistema
+            'comment' => 'Solicitud enviada automáticamente a revisión del equipo de viajes.',
+            'type' => 'system',
+        ]);
+    }
+
+    /**
+     * Aprueba la solicitud por parte del equipo de viajes
+     */
+    public function travelApprove(User $reviewer, ?string $comment = null): void
+    {
+        if (! $reviewer->isTravelTeamMember()) {
+            throw new \Exception('Solo miembros del equipo de viajes pueden aprobar solicitudes.');
+        }
+
+        $this->update([
+            'status' => 'travel_approved',
+            'travel_reviewed_at' => now(),
+            'travel_reviewed_by' => $reviewer->id,
+            'travel_review_comments' => $comment,
+        ]);
+
+        // Crear comentario de aprobación
+        $this->comments()->create([
+            'user_id' => $reviewer->id,
+            'comment' => $comment ?? 'Solicitud aprobada por el equipo de viajes.',
+            'type' => 'travel_approval',
+        ]);
+    }
+
+    /**
+     * Rechaza la solicitud por parte del equipo de viajes
+     */
+    public function travelReject(User $reviewer, string $reason): void
+    {
+        if (! $reviewer->isTravelTeamMember()) {
+            throw new \Exception('Solo miembros del equipo de viajes pueden rechazar solicitudes.');
+        }
+
+        $this->update([
+            'status' => 'travel_rejected',
+            'travel_reviewed_at' => now(),
+            'travel_reviewed_by' => $reviewer->id,
+            'travel_review_comments' => $reason,
+        ]);
+
+        // Crear comentario de rechazo
+        $this->comments()->create([
+            'user_id' => $reviewer->id,
+            'comment' => $reason,
+            'type' => 'travel_rejection',
+        ]);
+    }
+
+    /**
+     * Modifica los gastos especiales y aprueba la solicitud
+     */
+    public function travelEditAndApprove(User $reviewer, array $newCustomExpenses, string $comment): void
+    {
+        if (! $reviewer->isTravelTeamMember()) {
+            throw new \Exception('Solo miembros del equipo de viajes pueden editar gastos.');
+        }
+
+        $this->update([
+            'status' => 'travel_approved',
+            'custom_expenses_data' => $newCustomExpenses,
+            'travel_reviewed_at' => now(),
+            'travel_reviewed_by' => $reviewer->id,
+            'travel_review_comments' => $comment,
+        ]);
+
+        // Crear comentario detallado
+        $this->comments()->create([
+            'user_id' => $reviewer->id,
+            'comment' => $comment,
+            'type' => 'travel_edit_approval',
         ]);
     }
 }
