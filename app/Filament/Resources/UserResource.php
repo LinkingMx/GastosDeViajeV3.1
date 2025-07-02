@@ -112,6 +112,16 @@ class UserResource extends Resource
                                     ->preload(),
                             ]),
 
+                        Forms\Components\Toggle::make('travel_team')
+                            ->label('Miembro del Equipo de Viajes')
+                            ->helperText('Este usuario tendrá acceso a funcionalidades especiales del sistema de viajes')
+                            ->default(false),
+
+                        Forms\Components\Toggle::make('treasury_team')
+                            ->label('Miembro del Equipo de Tesorería')
+                            ->helperText('Este usuario tendrá acceso a funcionalidades especiales del sistema de tesorería')
+                            ->default(false),
+
                         Forms\Components\Toggle::make('override_authorization')
                             ->label('Autorización Especial')
                             ->helperText('Permite aprobar gastos sin seguir la jerarquía departamental')
@@ -196,6 +206,33 @@ class UserResource extends Resource
                     ->label('Posición')
                     ->searchable()
                     ->sortable(),
+
+                // Badge compacto que muestra ambos equipos
+                Tables\Columns\TextColumn::make('travel_team')
+                    ->label('Equipos')
+                    ->getStateUsing(function ($record) {
+                        $badges = [];
+                        if ($record->travel_team) {
+                            $badges[] = 'Viajes';
+                        }
+                        if ($record->treasury_team) {
+                            $badges[] = 'Tesorería';
+                        }
+
+                        return empty($badges) ? 'Usuario Regular' : implode(' • ', $badges);
+                    })
+                    ->badge()
+                    ->color(function ($record) {
+                        if ($record->travel_team && $record->treasury_team) {
+                            return 'info'; // Azul para ambos equipos
+                        } elseif ($record->travel_team) {
+                            return 'success'; // Verde para viajes
+                        } elseif ($record->treasury_team) {
+                            return 'warning'; // Amarillo para tesorería
+                        }
+
+                        return 'gray'; // Gris para usuarios regulares
+                    }),
 
                 Tables\Columns\TextColumn::make('bank.name')
                     ->label('Banco')

@@ -3,8 +3,6 @@
 namespace App\Filament\Resources\TravelRequestResource\Pages;
 
 use App\Filament\Resources\TravelRequestResource;
-use App\Mail\TravelRequestCreated;
-use App\Mail\TravelRequestSubmitted;
 use App\Models\Country;
 use App\Models\ExpenseConcept;
 use App\Models\PerDiem;
@@ -27,7 +25,6 @@ use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 
 class EditTravelRequest extends EditRecord
@@ -754,7 +751,10 @@ class EditTravelRequest extends EditRecord
 
     protected function getFormActions(): array
     {
-        if ($this->getRecord()->status !== 'draft') {
+        $record = $this->getRecord();
+
+        // Solo mostrar acciones si el usuario puede editar la solicitud
+        if (! $record->canBeEdited() || auth()->id() !== $record->user_id) {
             return [];
         }
 
@@ -774,40 +774,32 @@ class EditTravelRequest extends EditRecord
             }
         }
 
-        return [
-            Action::make('submitForAuthorization')
+        $actions = [];
+
+        // Botón para enviar a autorización
+        if ($record->canBeSubmitted() && $record->actual_authorizer) {
+            $actions[] = Action::make('submitForAuthorization')
                 ->label('Enviar a Autorización')
                 ->disabled(! $isComplete)
                 ->color($isComplete ? 'primary' : 'gray')
                 ->tooltip($isComplete ? null : 'Completa todos los campos obligatorios para enviar')
+                ->icon('heroicon-o-paper-airplane')
                 ->action(function () {
                     try {
-                        // Validar completamente antes de enviar
+                        // Guardar cambios primero
                         $data = $this->form->getState();
-                        $record = $this->getRecord();
+                        $this->getRecord()->update($data);
 
-                        // Actualizar datos y cambiar estado
-                        $data['status'] = 'submitted';
-                        $record->update($data);
-
-                        // Enviar notificaciones
-                        Mail::to($record->user)->send(new TravelRequestCreated($record));
-                        if ($record->authorizer) {
-                            Mail::to($record->authorizer)->send(new TravelRequestSubmitted($record));
-                            Notification::make()
-                                ->title('Nueva solicitud de viaje')
-                                ->body("{$record->user->name} ha enviado una nueva solicitud para tu autorización.")
-                                ->success()
-                                ->sendToDatabase($record->authorizer);
-                        }
+                        // Enviar a autorización usando el método del modelo
+                        $this->getRecord()->submitForAuthorization();
 
                         Notification::make()
                             ->title('Solicitud Enviada')
-                            ->body('Tu solicitud ha sido enviada para autorización.')
+                            ->body('Tu solicitud ha sido enviada para autorización a '.$this->getRecord()->actual_authorizer->name)
                             ->success()
                             ->send();
 
-                        $this->redirect($this->getResource()::getUrl('view', ['record' => $record]));
+                        $this->redirect($this->getResource()::getUrl('view', ['record' => $this->getRecord()]));
 
                     } catch (\Exception $e) {
                         Notification::make()
@@ -822,46 +814,44 @@ class EditTravelRequest extends EditRecord
                             'trace' => $e->getTraceAsString(),
                         ]);
                     }
-                }),
-        ];
+                });
+        }
+
+        return $actions;
     }
 
     protected function getHeaderActions(): array
     {
+        $record = $this->getRecord();
         $actions = [];
 
-        if ($this->getRecord()->status === 'draft') {
-            // Verificar si el formulario está completo
-            $rawData = $this->form->getRawState();
-            $requiredFields = [
-                'branch_id', 'origin_country_id', 'origin_city',
-                'destination_country_id', 'destination_city',
-                'departure_date', 'return_date',
-            ];
+        // Solo mostrar acciones de header si el usuario es el propietario
+        if (auth()->id() === $record->user_id) {
 
-            $isComplete = true;
-            foreach ($requiredFields as $field) {
-                if (empty($rawData[$field])) {
-                    $isComplete = false;
-                    break;
-                }
+            // Acción para eliminar (solo en draft y revision)
+            if ($record->canBeEdited()) {
+                $actions[] = Actions\DeleteAction::make()
+                    ->label('Eliminar Solicitud');
             }
 
-            $actions[] = Action::make('submitFromHeader')
-                ->label('Enviar a Autorización')
-                ->disabled(! $isComplete)
-                ->color($isComplete ? 'primary' : 'gray')
-                ->tooltip($isComplete ? null : 'Completa todos los campos obligatorios para enviar')
-                ->action(function () {
-                    // Ejecutar la misma lógica que el botón principal
-                    $formActions = $this->getFormActions();
-                    if (isset($formActions[0])) {
-                        $formActions[0]->call($this);
-                    }
-                });
+            // Acción para poner en revisión (solo si está rechazada)
+            if ($record->canBeRevisedBy(auth()->user())) {
+                $actions[] = Action::make('putInRevision')
+                    ->label('Poner en Revisión')
+                    ->color('warning')
+                    ->icon('heroicon-o-pencil-square')
+                    ->action(function () use ($record) {
+                        $record->putInRevision();
 
-            $actions[] = Actions\DeleteAction::make()
-                ->label('Eliminar Borrador');
+                        Notification::make()
+                            ->title('Solicitud en Revisión')
+                            ->body('La solicitud ha sido puesta en revisión y puede ser editada.')
+                            ->success()
+                            ->send();
+
+                        $this->redirect($this->getResource()::getUrl('edit', ['record' => $record]));
+                    });
+            }
         }
 
         return $actions;

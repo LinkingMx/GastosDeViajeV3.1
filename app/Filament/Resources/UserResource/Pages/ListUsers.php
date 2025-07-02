@@ -24,20 +24,17 @@ class ListUsers extends ListRecords
     public function getTabs(): array
     {
         return [
-            'all' => Tab::make('Todos')
-                ->badge(User::count()),
+            'usuarios' => Tab::make('Usuarios')
+                ->modifyQueryUsing(fn (Builder $query) => $query->regularUsers())
+                ->badge(User::regularUsers()->count()),
 
-            'verified' => Tab::make('Verificados')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('email_verified_at'))
-                ->badge(User::whereNotNull('email_verified_at')->count()),
+            'tesoreria' => Tab::make('Tesorería')
+                ->modifyQueryUsing(fn (Builder $query) => $query->treasuryTeam())
+                ->badge(User::treasuryTeam()->count()),
 
-            'unverified' => Tab::make('Sin Verificar')
-                ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('email_verified_at'))
-                ->badge(User::whereNull('email_verified_at')->count()),
-
-            'special_auth' => Tab::make('Autorización Especial')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('override_authorization', true))
-                ->badge(User::where('override_authorization', true)->count()),
+            'viajes' => Tab::make('Viajes')
+                ->modifyQueryUsing(fn (Builder $query) => $query->travelTeam())
+                ->badge(User::travelTeam()->count()),
         ];
     }
 }

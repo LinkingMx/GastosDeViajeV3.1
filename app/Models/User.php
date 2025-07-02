@@ -30,6 +30,8 @@ class User extends Authenticatable
         'account_number',
         'override_authorization',
         'override_authorizer_id',
+        'travel_team',
+        'treasury_team',
     ];
 
     /**
@@ -53,6 +55,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'override_authorization' => 'boolean',
+            'travel_team' => 'boolean',
+            'treasury_team' => 'boolean',
         ];
     }
 
@@ -154,6 +158,66 @@ class User extends Authenticatable
         if (! $value) {
             $this->attributes['override_authorizer_id'] = null;
         }
+    }
+
+    /**
+     * Scope para obtener solo usuarios del equipo de viajes
+     */
+    public function scopeTravelTeam($query)
+    {
+        return $query->where('travel_team', true);
+    }
+
+    /**
+     * Scope para obtener usuarios regulares (no del equipo de viajes)
+     */
+    public function scopeRegularUsers($query)
+    {
+        return $query->where('travel_team', false)->where('treasury_team', false);
+    }
+
+    /**
+     * Scope para obtener solo usuarios del equipo de tesorería
+     */
+    public function scopeTreasuryTeam($query)
+    {
+        return $query->where('treasury_team', true);
+    }
+
+    /**
+     * Scope para obtener usuarios con acceso especial (equipo de viajes O autorización especial)
+     */
+    public function scopeWithSpecialAccess($query)
+    {
+        return $query->where(function ($query) {
+            $query->where('travel_team', true)
+                ->orWhere('treasury_team', true)
+                ->orWhere('override_authorization', true);
+        });
+    }
+
+    /**
+     * Verifica si el usuario pertenece al equipo de viajes
+     */
+    public function isTravelTeamMember(): bool
+    {
+        return (bool) $this->travel_team;
+    }
+
+    /**
+     * Verifica si el usuario pertenece al equipo de tesorería
+     */
+    public function isTreasuryTeamMember(): bool
+    {
+        return (bool) $this->treasury_team;
+    }
+
+    /**
+     * Verifica si el usuario tiene acceso especial (equipo de viajes, tesorería o autorización especial)
+     */
+    public function hasSpecialAccess(): bool
+    {
+        return $this->travel_team || $this->treasury_team || $this->override_authorization;
     }
 
     /**

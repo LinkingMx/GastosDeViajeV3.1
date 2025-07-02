@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\TravelRequestResource\Pages;
 
 use App\Filament\Resources\TravelRequestResource;
-use App\Mail\TravelRequestCreated;
 use App\Models\Country;
 use App\Models\ExpenseConcept;
 use App\Models\PerDiem;
@@ -21,7 +20,6 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\HtmlString;
 
 class CreateTravelRequest extends CreateRecord
@@ -676,14 +674,57 @@ class CreateTravelRequest extends CreateRecord
 
     protected function afterCreate(): void
     {
-        // Enviar notificación por correo electrónico al crear la solicitud de viaje
-        Mail::to(auth()->user()->email)->send(new TravelRequestCreated($this->getRecord()));
+        // Determinar el autorizador basado en la configuración del usuario
+        $authorizer = $this->getRecord()->actual_authorizer;
+
+        if ($authorizer) {
+            $this->getRecord()->update(['authorizer_id' => $authorizer->id]);
+        }
 
         // Mostrar notificación de éxito
         \Filament\Notifications\Notification::make()
             ->title('Solicitud Creada')
-            ->body('La solicitud de viaje ha sido creada exitosamente.')
+            ->body('La solicitud de viaje ha sido creada exitosamente como borrador.')
             ->success()
             ->send();
+    }
+
+    protected function getFormActions(): array
+    {
+        return [
+            $this->getCreateFormAction(),
+            $this->getCreateAndSubmitFormAction(),
+            $this->getCancelFormAction(),
+        ];
+    }
+
+    protected function getCreateAndSubmitFormAction(): \Filament\Actions\Action
+    {
+        return \Filament\Actions\Action::make('createAndSubmit')
+            ->label('Crear y Enviar a Autorización')
+            ->action(function () {
+                // Primero crear la solicitud
+                $this->create();
+
+                // Luego enviar a autorización si tiene autorizador
+                $record = $this->getRecord();
+                if ($record && $record->actual_authorizer) {
+                    $record->submitForAuthorization();
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('Solicitud Enviada')
+                        ->body('La solicitud ha sido enviada para autorización a '.$record->actual_authorizer->name)
+                        ->success()
+                        ->send();
+                } else {
+                    \Filament\Notifications\Notification::make()
+                        ->title('Sin Autorizador')
+                        ->body('La solicitud se creó como borrador. No se encontró un autorizador asignado.')
+                        ->warning()
+                        ->send();
+                }
+            })
+            ->color('primary')
+            ->icon('heroicon-o-paper-airplane');
     }
 }
