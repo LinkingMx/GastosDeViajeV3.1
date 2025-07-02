@@ -140,6 +140,31 @@ class TravelRequestResource extends Resource
                     ->icon('heroicon-o-paper-clip')
                     ->visible(fn ($record) => $record && $record->status === 'travel_approved')
                     ->tooltip('Archivos adjuntos subidos por el equipo de viajes'),
+                Tables\Columns\IconColumn::make('advance_deposit_made')
+                    ->label('Anticipo')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-banknotes')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->visible(fn ($record) => $record && in_array($record->status, ['approved', 'travel_review', 'travel_approved']))
+                    ->tooltip(function ($record) {
+                        if (! $record || ! $record->advance_deposit_made) {
+                            return 'Anticipo no depositado';
+                        }
+                        $tooltip = 'Anticipo depositado';
+                        if ($record->advance_deposit_amount) {
+                            $tooltip .= ' - $'.number_format($record->advance_deposit_amount, 2);
+                        }
+                        if ($record->advanceDepositMadeByUser) {
+                            $tooltip .= ' por '.$record->advanceDepositMadeByUser->name;
+                        }
+                        if ($record->advance_deposit_made_at) {
+                            $tooltip .= ' el '.$record->advance_deposit_made_at->format('d/m/Y H:i');
+                        }
+
+                        return $tooltip;
+                    }),
                 Tables\Columns\TextColumn::make('submitted_at')
                     ->label('Enviada')
                     ->date('d/m/Y H:i')
@@ -434,6 +459,154 @@ class TravelRequestResource extends Resource
                             ->close(),
                     ]),
 
+                // ===============================================
+                // ACCIONES DE TESORERÍA
+                // ===============================================
+                Tables\Actions\Action::make('mark_advance_deposit')
+                    ->label('Marcar Depósito')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('success')
+                    ->visible(fn ($record) => $record && $record->canMarkAdvanceDeposit(auth()->user()))
+                    ->form([
+                        \Filament\Forms\Components\TextInput::make('advance_deposit_amount')
+                            ->label('Monto del Depósito')
+                            ->numeric()
+                            ->prefix('$')
+                            ->step(0.01)
+                            ->minValue(0)
+                            ->placeholder('0.00')
+                            ->required()
+                            ->helperText('Ingresa el monto exacto depositado'),
+                        \Filament\Forms\Components\Textarea::make('advance_deposit_notes')
+                            ->label('Notas del Depósito')
+                            ->placeholder('Referencia, número de transferencia, banco, etc.')
+                            ->rows(3)
+                            ->helperText('Información adicional sobre el depósito'),
+                        \Filament\Forms\Components\FileUpload::make('deposit_receipt')
+                            ->label('Comprobante de Depósito')
+                            ->disk('local')
+                            ->directory('deposit-receipts')
+                            ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])
+                            ->maxSize(5120) // 5MB
+                            ->preserveFilenames()
+                            ->openable()
+                            ->downloadable()
+                            ->helperText('Sube el comprobante del depósito (PDF, JPG, PNG - máx. 5MB)')
+                            ->required(),
+                    ])
+                    ->action(function ($record, array $data) {
+                        try {
+                            // Mark the deposit as made
+                            $record->markAdvanceDepositMade(
+                                auth()->user(),
+                                $data['advance_deposit_amount'] ?? null,
+                                $data['advance_deposit_notes'] ?? null
+                            );
+
+                            // Upload the deposit receipt attachment if provided
+                            if (! empty($data['deposit_receipt'])) {
+                                // Get the "Comprobante de Depósito" attachment type
+                                $depositAttachmentType = \App\Models\AttachmentType::where('slug', 'advance_deposit_receipt')->first();
+
+                                if ($depositAttachmentType) {
+                                    \App\Models\TravelRequestAttachment::create([
+                                        'travel_request_id' => $record->id,
+                                        'attachment_type_id' => $depositAttachmentType->id,
+                                        'file_path' => $data['deposit_receipt'],
+                                        'original_name' => 'Comprobante de Depósito',
+                                        'uploaded_by' => auth()->id(),
+                                    ]);
+                                }
+                            }
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Depósito de anticipo marcado')
+                                ->body('El depósito y el comprobante han sido registrados exitosamente.')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Error al marcar depósito')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('unmark_advance_deposit')
+                    ->label('Desmarcar Depósito')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn ($record) => $record && $record->canUnmarkAdvanceDeposit(auth()->user()))
+                    ->requiresConfirmation()
+                    ->modalHeading('Desmarcar depósito de anticipo')
+                    ->modalDescription('¿Estás seguro de que deseas desmarcar este depósito? Esta acción eliminará toda la información del depósito y los comprobantes asociados.')
+                    ->action(function ($record) {
+                        try {
+                            // Remove deposit receipt attachments before unmarking
+                            $depositAttachmentType = \App\Models\AttachmentType::where('slug', 'advance_deposit_receipt')->first();
+                            if ($depositAttachmentType) {
+                                $depositAttachments = $record->attachments()->where('attachment_type_id', $depositAttachmentType->id)->get();
+                                foreach ($depositAttachments as $attachment) {
+                                    // Delete the physical file
+                                    if (\Storage::disk('local')->exists($attachment->file_path)) {
+                                        \Storage::disk('local')->delete($attachment->file_path);
+                                    }
+                                    // Delete the record
+                                    $attachment->delete();
+                                }
+                            }
+
+                            $record->unmarkAdvanceDeposit(auth()->user());
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Depósito desmarcado')
+                                ->body('El depósito y los comprobantes han sido eliminados exitosamente.')
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Error al desmarcar depósito')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+
+                Tables\Actions\Action::make('manage_deposit_receipt')
+                    ->label('Comprobante de Depósito')
+                    ->icon('heroicon-o-document-arrow-up')
+                    ->color('info')
+                    ->visible(fn ($record) => $record && $record->advance_deposit_made && auth()->user()->isTreasuryTeamMember())
+                    ->action(function ($record) {
+                        // Get existing deposit receipts
+                        $depositAttachmentType = \App\Models\AttachmentType::where('slug', 'advance_deposit_receipt')->first();
+                        $existingReceipts = $depositAttachmentType
+                            ? $record->attachments()->where('attachment_type_id', $depositAttachmentType->id)->get()
+                            : collect();
+
+                        if ($existingReceipts->isNotEmpty()) {
+                            // Show existing receipts
+                            $receiptsList = $existingReceipts->map(function ($attachment) {
+                                return "• {$attachment->original_name} (subido el {$attachment->created_at->format('d/m/Y H:i')})";
+                            })->join("\n");
+
+                            \Filament\Notifications\Notification::make()
+                                ->title('Comprobantes de depósito existentes')
+                                ->body("Los siguientes comprobantes están registrados:\n\n{$receiptsList}")
+                                ->info()
+                                ->persistent()
+                                ->send();
+                        } else {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Sin comprobantes')
+                                ->body('No hay comprobantes de depósito registrados para esta solicitud.')
+                                ->warning()
+                                ->send();
+                        }
+                    }),
+
+                // ...existing code...
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()

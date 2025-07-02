@@ -39,6 +39,11 @@ class TravelRequest extends Model
         'travel_reviewed_at',
         'travel_reviewed_by',
         'travel_review_comments',
+        'advance_deposit_made',
+        'advance_deposit_made_at',
+        'advance_deposit_made_by',
+        'advance_deposit_notes',
+        'advance_deposit_amount',
     ];
 
     /**
@@ -70,6 +75,9 @@ class TravelRequest extends Model
         'authorized_at' => 'datetime',
         'rejected_at' => 'datetime',
         'travel_reviewed_at' => 'datetime',
+        'advance_deposit_made' => 'boolean',
+        'advance_deposit_made_at' => 'datetime',
+        'advance_deposit_amount' => 'decimal:2',
     ];
 
     /**
@@ -94,6 +102,14 @@ class TravelRequest extends Model
     public function travelReviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'travel_reviewed_by');
+    }
+
+    /**
+     * Get the user who made the advance deposit.
+     */
+    public function advanceDepositMadeByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'advance_deposit_made_by');
     }
 
     /**
@@ -360,6 +376,63 @@ class TravelRequest extends Model
     public function canUploadAttachments(User $user): bool
     {
         return $this->status === 'travel_approved' && $user->isTravelTeamMember();
+    }
+
+    /**
+     * Verificar si un usuario puede marcar el depósito de anticipo
+     * Solo miembros del equipo de tesorería pueden hacerlo en solicitudes aprobadas
+     */
+    public function canMarkAdvanceDeposit(User $user): bool
+    {
+        return in_array($this->status, ['approved', 'travel_review', 'travel_approved'])
+               && $user->isTreasuryTeamMember()
+               && ! $this->advance_deposit_made;
+    }
+
+    /**
+     * Marcar el depósito de anticipo como realizado
+     */
+    public function markAdvanceDepositMade(User $user, ?float $amount = null, ?string $notes = null): void
+    {
+        if (! $this->canMarkAdvanceDeposit($user)) {
+            throw new \Exception('No tienes permisos para marcar el depósito de anticipo en esta solicitud.');
+        }
+
+        $this->update([
+            'advance_deposit_made' => true,
+            'advance_deposit_made_at' => now(),
+            'advance_deposit_made_by' => $user->id,
+            'advance_deposit_amount' => $amount,
+            'advance_deposit_notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Verificar si se puede desmarcar el depósito de anticipo
+     */
+    public function canUnmarkAdvanceDeposit(User $user): bool
+    {
+        return $this->advance_deposit_made
+               && $user->isTreasuryTeamMember()
+               && $this->advance_deposit_made_by === $user->id;
+    }
+
+    /**
+     * Desmarcar el depósito de anticipo
+     */
+    public function unmarkAdvanceDeposit(User $user): void
+    {
+        if (! $this->canUnmarkAdvanceDeposit($user)) {
+            throw new \Exception('No puedes desmarcar este depósito de anticipo.');
+        }
+
+        $this->update([
+            'advance_deposit_made' => false,
+            'advance_deposit_made_at' => null,
+            'advance_deposit_made_by' => null,
+            'advance_deposit_amount' => null,
+            'advance_deposit_notes' => null,
+        ]);
     }
 
     /**
