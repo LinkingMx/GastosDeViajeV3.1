@@ -88,7 +88,8 @@ class TravelRequestAttachment extends Model
      */
     public function getDownloadUrlAttribute(): string
     {
-        return Storage::url($this->file_path);
+        // Use secure download route for all attachments
+        return route('attachments.download', $this);
     }
 
     /**
