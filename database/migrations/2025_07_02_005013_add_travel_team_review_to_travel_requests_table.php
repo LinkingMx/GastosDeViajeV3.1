@@ -12,14 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('travel_requests', function (Blueprint $table) {
-            // Solo agregar la columna que falta
-            $table->text('travel_review_comments')->nullable();
-
-            // Agregar foreign key para travel_reviewed_by si no existe
-            try {
-                $table->foreign('travel_reviewed_by')->references('id')->on('users');
-            } catch (\Exception $e) {
-                // Ya existe la foreign key
+            // Agregar columnas necesarias para el equipo de viajes
+            if (! Schema::hasColumn('travel_requests', 'travel_reviewed_by')) {
+                $table->foreignId('travel_reviewed_by')->nullable()->constrained('users');
+            }
+            if (! Schema::hasColumn('travel_requests', 'travel_review_comments')) {
+                $table->text('travel_review_comments')->nullable();
             }
         });
     }
@@ -30,12 +28,14 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('travel_requests', function (Blueprint $table) {
-            try {
+            // Eliminar las columnas agregadas
+            if (Schema::hasColumn('travel_requests', 'travel_reviewed_by')) {
                 $table->dropForeign(['travel_reviewed_by']);
-            } catch (\Exception $e) {
-                // Foreign key no existe
+                $table->dropColumn('travel_reviewed_by');
             }
-            $table->dropColumn(['travel_review_comments']);
+            if (Schema::hasColumn('travel_requests', 'travel_review_comments')) {
+                $table->dropColumn('travel_review_comments');
+            }
         });
     }
 };
