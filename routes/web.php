@@ -3,9 +3,7 @@
 use App\Http\Controllers\AttachmentController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/admin');
 
 // Protected route for downloading attachments
 Route::middleware(['auth'])->group(function () {
