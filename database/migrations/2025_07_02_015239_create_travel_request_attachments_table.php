@@ -29,8 +29,8 @@ return new class extends Migration
             $table->timestamps();
 
             // Índices para mejorar el rendimiento
-            $table->index(['travel_request_id', 'attachment_type']);
-            $table->index('uploaded_by');
+            $table->index(['travel_request_id', 'attachment_type'], 'tr_attachments_request_type_idx');
+            $table->index('uploaded_by', 'tr_attachments_uploader_idx');
         });
     }
 

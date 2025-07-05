@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('travel_request_attachments', function (Blueprint $table) {
-            // Primero eliminar los índices que usan la columna attachment_type
-            $table->dropIndex(['travel_request_id', 'attachment_type']);
+            // Primero eliminar los índices que usan la columna attachment_type (usando el nombre personalizado)
+            $table->dropIndex('tr_attachments_request_type_idx');
 
             // Luego eliminar la columna enum ya que ahora usamos attachment_type_id
             $table->dropColumn('attachment_type');
@@ -34,8 +34,8 @@ return new class extends Migration
                 'other_document',
             ])->default('other_document')->after('file_size');
 
-            // Restaurar el índice
-            $table->index(['travel_request_id', 'attachment_type']);
+            // Restaurar el índice con el nombre personalizado
+            $table->index(['travel_request_id', 'attachment_type'], 'tr_attachments_request_type_idx');
         });
     }
 };
