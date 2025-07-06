@@ -514,25 +514,25 @@ class EditTravelRequest extends EditRecord
                             return new HtmlString('
                                 <div class="w-full">
                                     <!-- Folio de la Solicitud -->
-                                    <div class="bg-green-50 dark:bg-green-900/30 border-2 border-green-300 dark:border-green-600 p-4 rounded-lg mb-4">
+                                    <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                         <div class="flex items-center justify-center">
-                                            <div class="text-center">
-                                                <div class="text-sm font-medium text-green-700 dark:text-green-300 mb-1">Folio de Solicitud</div>
-                                                <div class="text-2xl font-bold text-green-800 dark:text-green-200 font-mono tracking-wider">'.$folio.'</div>
-                                                <div class="text-xs text-green-600 dark:text-green-400 mt-1">Solicitud existente</div>
+                                            <div class="text-center bg-amber-100">
+                                                <div class="text-sm font-medium mb-1">Folio de Solicitud</div>
+                                                <div class="text-2xl font-bold text-blue-800 dark:text-blue-200 font-mono tracking-wider">'.$folio.'</div>
+                                                <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Solicitud existente</div>
                                             </div>
                                         </div>
                                     </div>
 
                                     <!-- Header del Reporte -->
-                                    <div class="bg-blue-600 dark:bg-gray-800 border-l-4 border-blue-800 dark:border-blue-400 p-6 rounded-t-lg shadow-lg">
+                                    <div class="border-l-4 p-6 rounded-t-lg shadow-lg bg-gray-100 dark:bg-gray-800">
                                         <div class="flex items-center justify-between">
                                             <div>
-                                                <h2 class="text-2xl font-bold text-white dark:text-gray-100">Solicitud de Viaje</h2>
+                                                <h2 class="text-2xl font-bold dark:text-white">Solicitud de Viaje</h2>
                                                 <p class="text-blue-100 dark:text-gray-300 mt-1">Resumen completo de la solicitud</p>
                                             </div>
                                             <div class="text-right">
-                                                <div class="text-3xl font-bold text-white dark:text-gray-100">$'.number_format($grandTotal, 2).'</div>
+                                                <div class="text-3xl font-bold dark:text-white">$'.number_format($grandTotal, 2).'</div>
                                                 <div class="text-blue-100 dark:text-gray-300 text-sm">Total Estimado</div>
                                             </div>
                                         </div>
@@ -547,42 +547,40 @@ class EditTravelRequest extends EditRecord
                                                 </svg>
                                                 Información del Solicitante
                                             </h3>
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full" >
+                                                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg min-w-full">
                                                     <div class="text-sm text-gray-600 dark:text-gray-400">Solicitante</div>
                                                     <div class="font-medium text-gray-900 dark:text-white">'.$user->name.'</div>
                                                 </div>
-                                                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                                    <div class="text-sm text-gray-600 dark:text-gray-400">Centro de Costos</div>
+                                                <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg min-w-full">
+                                                    <div class="text-sm text-gray-600 dark:text-gray-400">Centro de costo</div>
                                                     <div class="font-medium text-gray-900 dark:text-white">'.$branch.'</div>
                                                 </div>
                                             </div>
                                         </div>
-
-                                        <!-- Detalles del Viaje -->
                                         <div class="border-b border-gray-200 dark:border-gray-700 p-6">
                                             <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                                <svg class="w-5 h-5 mr-2 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                                     <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
                                                 </svg>
-                                                Detalles del Viaje
+                                                 Detalles del Viaje
                                             </h3>
                                             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                <div class="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-4 rounded-lg">
+                                                <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                                     <div class="text-sm text-emerald-700 dark:text-emerald-300">Origen</div>
                                                     <div class="font-semibold text-emerald-900 dark:text-emerald-100">'.$originCity.'</div>
                                                     <div class="text-xs text-emerald-600 dark:text-emerald-400">'.$originCountry.'</div>
                                                 </div>
-                                                <div class="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 p-4 rounded-lg">
+                                                <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                                     <div class="text-sm text-rose-700 dark:text-rose-300">Destino</div>
                                                     <div class="font-semibold text-rose-900 dark:text-rose-100">'.$destinationCity.'</div>
                                                     <div class="text-xs text-rose-600 dark:text-rose-400">'.$destCountry.'</div>
                                                 </div>
-                                                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                                                <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                                     <div class="text-sm text-blue-700 dark:text-blue-300">Fecha de Salida</div>
                                                     <div class="font-semibold text-blue-900 dark:text-blue-100 text-sm">'.$departureDateFormatted.'</div>
                                                 </div>
-                                                <div class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-4 rounded-lg">
+                                                <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                                     <div class="text-sm text-purple-700 dark:text-purple-300">Fecha de Regreso</div>
                                                     <div class="font-semibold text-purple-900 dark:text-purple-100 text-sm">'.$returnDateFormatted.'</div>
                                                 </div>
@@ -591,8 +589,8 @@ class EditTravelRequest extends EditRecord
                                                 <div class="inline-flex items-center px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full">
                                                     <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
-                                                </svg>
-                                                    <span class="font-semibold">Duración total: '.$daysText.'</span>
+                                                    </svg>
+                                                    <span class="font-semibold mt-2">Duración total: '.$daysText.'</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -606,8 +604,8 @@ class EditTravelRequest extends EditRecord
                                                 </svg>
                                                 Notas y Justificación del Viaje
                                             </h3>
-                                            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                                                <p class="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">'.$notes.'</p>
+                                            <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
+                                                <p class="">'.$notes.'</p>
                                             </div>
                                         </div>
                                         ' : '').'
@@ -615,15 +613,15 @@ class EditTravelRequest extends EditRecord
                                         '.(count($requestedServices) > 0 ? '
                                         <!-- Servicios Administrados -->
                                         <div class="border-b border-gray-200 dark:border-gray-700 p-6">
-                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                                                 <svg class="w-5 h-5 mr-2 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                                                     <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                 </svg>
-                                                Servicios Administrados Solicitados
+                                                 Servicios Administrados Solicitados
                                             </h3>
                                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 '.implode('', array_map(function ($service) {
-                                return '<div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-4 rounded-lg">
+                                return '<div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                                         <div class="font-semibold text-orange-900 dark:text-orange-100">'.$service['name'].'</div>
                                                         <div class="text-sm text-orange-700 dark:text-orange-300 mt-1">'.$service['notes'].'</div>
                                                     </div>';
@@ -643,18 +641,18 @@ class EditTravelRequest extends EditRecord
                                             </h3>
                                             <div class="overflow-x-auto">
                                                 <table class="min-w-full">
-                                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                                    <thead class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
                                                         <tr>
-                                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Concepto</th>
-                                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Monto Diario</th>
-                                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Días</th>
-                                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Total</th>
-                                                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Notas</th>
+                                                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Concepto</th>
+                                                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Monto Diario</th>
+                                                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Días</th>
+                                                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Total</th>
+                                                            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Notas</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                                    <tbody class="">
                                                         '.implode('', array_map(function ($detail) {
-                                return '<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                return '<tr class="">
                                                                 <td class="px-4 py-4">
                                                                     <div class="font-medium text-gray-900 dark:text-white">'.$detail['name'].'</div>
                                                                     '.($detail['concept'] ? '<div class="text-sm text-gray-500 dark:text-gray-400">('.$detail['concept'].')</div>' : '').'
@@ -662,7 +660,7 @@ class EditTravelRequest extends EditRecord
                                                                 <td class="px-4 py-4 text-sm text-gray-900 dark:text-white">$'.number_format($detail['daily'], 2).'</td>
                                                                 <td class="px-4 py-4 text-sm text-gray-900 dark:text-white">'.$detail['days'].'</td>
                                                                 <td class="px-4 py-4 text-sm font-semibold text-green-600 dark:text-green-400">$'.number_format($detail['total'], 2).'</td>
-                                                                <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">'.($detail['notes'] ?: 'Sin notas').'</td>
+                                                                <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400 w-full">'.($detail['notes'] ?: 'Sin notas').'</td>
                                                             </tr>';
                             }, $perDiemDetails)).'
                                                     </tbody>
@@ -753,25 +751,14 @@ class EditTravelRequest extends EditRecord
     {
         $record = $this->getRecord();
 
-        // Solo mostrar acciones si el usuario puede editar la solicitud
-        if (! $record->canBeEdited() || auth()->id() !== $record->user_id) {
+        // If the record is not available yet, return no actions.
+        if (! $record) {
             return [];
         }
 
-        // Verificar si el formulario está completo para habilitar "Enviar a Autorización"
-        $rawData = $this->form->getRawState();
-        $requiredFields = [
-            'branch_id', 'origin_country_id', 'origin_city',
-            'destination_country_id', 'destination_city',
-            'departure_date', 'return_date',
-        ];
-
-        $isComplete = true;
-        foreach ($requiredFields as $field) {
-            if (empty($rawData[$field])) {
-                $isComplete = false;
-                break;
-            }
+        // Solo mostrar acciones si el usuario puede editar la solicitud
+        if (! $record->canBeEdited() || auth()->id() !== $record->user_id) {
+            return [];
         }
 
         $actions = [];
@@ -780,14 +767,32 @@ class EditTravelRequest extends EditRecord
         if ($record->canBeSubmitted() && $record->actual_authorizer) {
             $actions[] = Action::make('submitForAuthorization')
                 ->label('Enviar a Autorización')
-                ->disabled(! $isComplete)
-                ->color($isComplete ? 'primary' : 'gray')
-                ->tooltip($isComplete ? null : 'Completa todos los campos obligatorios para enviar')
+                ->color('primary')
                 ->icon('heroicon-o-paper-airplane')
                 ->action(function () {
                     try {
-                        // Guardar cambios primero
+                        // Validar campos requeridos antes de enviar
                         $data = $this->form->getState();
+
+                        $requiredFields = [
+                            'branch_id', 'origin_country_id', 'origin_city',
+                            'destination_country_id', 'destination_city',
+                            'departure_date', 'return_date',
+                        ];
+
+                        foreach ($requiredFields as $field) {
+                            if (empty($data[$field])) {
+                                Notification::make()
+                                    ->title('Campos Incompletos')
+                                    ->body('Por favor completa todos los campos obligatorios antes de enviar.')
+                                    ->warning()
+                                    ->send();
+
+                                return;
+                            }
+                        }
+
+                        // Guardar cambios primero
                         $this->getRecord()->update($data);
 
                         // Enviar a autorización usando el método del modelo

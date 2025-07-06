@@ -16,7 +16,7 @@ class AttachmentTypeResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
-    protected static ?string $navigationGroup = 'Configuración';
+    protected static ?string $navigationGroup = 'Administración';
 
     protected static ?string $navigationLabel = 'Tipos de Documentos';
 

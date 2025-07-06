@@ -31,4 +31,14 @@ class CreateExpenseConcept extends CreateRecord
     {
         return 'heroicon-o-plus';
     }
+
+    public function getHeading(): string
+    {
+        return 'Crear Concepto de Gasto';
+    }
+
+    public function getSubheading(): ?string
+    {
+        return 'Crea un nuevo concepto de gasto para organizar y clasificar los diferentes tipos de gastos que pueden ocurrir durante un viaje. Ejemplos: Alimentación, Hospedaje, Transporte, Combustible, etc.';
+    }
 }

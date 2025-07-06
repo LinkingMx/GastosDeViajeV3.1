@@ -33,22 +33,25 @@ class ExpenseConceptResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('Información del Concepto')
+                    ->description('Los conceptos de gastos son categorías agrupadores que permiten organizar y clasificar los diferentes tipos de gastos que pueden ocurrir durante un viaje.')
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->label('Nombre')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true),
+                            ->unique(ignoreRecord: true)
+                            ->helperText('Ejemplo: Alimentación, Hospedaje, Transporte, Combustible, etc.'),
 
                         Forms\Components\Textarea::make('description')
                             ->label('Descripción')
                             ->maxLength(500)
                             ->rows(3)
-                            ->columnSpanFull(),
+                            ->columnSpanFull()
+                            ->helperText('Describe el tipo de gastos que agrupa este concepto para facilitar su identificación.'),
 
                         Forms\Components\Toggle::make('is_unmanaged')
                             ->label('No Gestionado')
-                            ->helperText('Permite que los usuarios agreguen detalles personalizados'),
+                            ->helperText('Permite que los usuarios agreguen detalles personalizados para gastos específicos que no tienen un detalle predefinido.'),
                     ]),
             ]);
     }
@@ -65,7 +68,8 @@ class ExpenseConceptResource extends Resource
                 Tables\Columns\TextColumn::make('description')
                     ->label('Descripción')
                     ->limit(50)
-                    ->placeholder('Sin descripción'),
+                    ->placeholder('Sin descripción')
+                    ->tooltip(fn ($record) => $record->description),
 
                 Tables\Columns\TextColumn::make('type')
                     ->label('Tipo')
@@ -79,7 +83,8 @@ class ExpenseConceptResource extends Resource
                 Tables\Columns\TextColumn::make('details_count')
                     ->label('Detalles')
                     ->counts('details')
-                    ->sortable(),
+                    ->sortable()
+                    ->tooltip('Número de detalles específicos asociados a este concepto'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Creado')

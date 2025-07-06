@@ -16,4 +16,9 @@ class ListExpenseConcepts extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    public function getHeading(): string
+    {
+        return 'Conceptos de Gasto';
+    }
 }
