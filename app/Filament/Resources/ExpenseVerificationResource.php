@@ -17,7 +17,7 @@ class ExpenseVerificationResource extends Resource
 {
     protected static ?string $model = ExpenseVerification::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-check';
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
 
     protected static ?string $navigationLabel = 'Comprobaciones de Gastos';
 
@@ -62,7 +62,8 @@ class ExpenseVerificationResource extends Resource
                             ->helperText('Se generará automáticamente al crear la comprobación')
                             ->hiddenOn('create'),
                     ])
-                    ->columns(1),
+                    ->columns(2)
+                    ->collapsible(),
 
                 Forms\Components\Section::make('Información de la Solicitud')
                     ->schema([
@@ -82,7 +83,8 @@ class ExpenseVerificationResource extends Resource
                             })
                             ->columnSpanFull(),
                     ])
-                    ->hiddenOn('create'),
+                    ->hiddenOn('create')
+                    ->collapsible(),
 
                 Forms\Components\Section::make('Resumen Monetario')
                     ->schema([
@@ -102,7 +104,8 @@ class ExpenseVerificationResource extends Resource
                             })
                             ->columnSpanFull(),
                     ])
-                    ->hiddenOn('create'),
+                    ->hiddenOn('create')
+                    ->collapsible(),
             ]);
     }
 
