@@ -688,23 +688,19 @@ class CreateTravelRequest extends CreateRecord
         }
 
         if ($this->isSubmittingAndContinuing) {
-            \Filament\Notifications\Notification::make()
-                ->title('Solicitud Creada')
-                ->body('La solicitud ha sido creada como borrador. Ahora puedes revisarla y enviarla a autorización.')
-                ->success()
-                ->send();
-
             $this->redirect(self::$resource::getUrl('edit', ['record' => $record]));
         } else {
-            // Mostrar notificación de éxito
-            \Filament\Notifications\Notification::make()
-                ->title('Solicitud Creada')
-                ->body('La solicitud de viaje ha sido creada exitosamente como borrador.')
-                ->success()
-                ->send();
-
             $this->redirect(self::$resource::getUrl('index'));
         }
+    }
+
+    // Desactivar la notificación estándar de Filament
+    protected function getCreatedNotification(): ?\Filament\Notifications\Notification
+    {
+        return \Filament\Notifications\Notification::make()
+            ->title('Solicitud Creada')
+            ->body('La solicitud de viaje ha sido creada exitosamente como borrador.')
+            ->success();
     }
 
     protected function getFormActions(): array

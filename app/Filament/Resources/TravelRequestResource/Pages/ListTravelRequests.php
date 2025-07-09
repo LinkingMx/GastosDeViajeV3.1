@@ -58,11 +58,6 @@ class ListTravelRequests extends ListRecords
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'travel_review'))
                 ->badge($this->getTabBadgeCount('travel_pending'));
 
-            $tabs['travel_reviewed'] = Tab::make('Revisadas por Mí')
-                ->icon('heroicon-o-check-badge')
-                ->modifyQueryUsing(fn (Builder $query) => $query->where('travel_reviewed_by', $user->id))
-                ->badge($this->getTabBadgeCount('travel_reviewed'));
-
             $tabs['travel_approved'] = Tab::make('Aprobadas Final')
                 ->icon('heroicon-o-shield-check')
                 ->modifyQueryUsing(fn (Builder $query) => $query->where('status', 'travel_approved'))
@@ -120,7 +115,6 @@ class ListTravelRequests extends ListRecords
                 })
                 ->count(),
             'travel_pending' => TravelRequest::where('status', 'travel_review')->count(),
-            'travel_reviewed' => TravelRequest::where('travel_reviewed_by', $user->id)->count(),
             'travel_approved' => TravelRequest::where('status', 'travel_approved')->count(),
             default => 0,
         };

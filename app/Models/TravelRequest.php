@@ -36,9 +36,6 @@ class TravelRequest extends Model
         'submitted_at',
         'authorized_at',
         'rejected_at',
-        'travel_reviewed_at',
-        'travel_reviewed_by',
-        'travel_review_comments',
         'advance_deposit_made',
         'advance_deposit_made_at',
         'advance_deposit_made_by',
@@ -74,7 +71,6 @@ class TravelRequest extends Model
         'submitted_at' => 'datetime',
         'authorized_at' => 'datetime',
         'rejected_at' => 'datetime',
-        'travel_reviewed_at' => 'datetime',
         'advance_deposit_made' => 'boolean',
         'advance_deposit_made_at' => 'datetime',
         'advance_deposit_amount' => 'decimal:2',
@@ -94,14 +90,6 @@ class TravelRequest extends Model
     public function authorizer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'authorizer_id');
-    }
-
-    /**
-     * Get the user who reviewed the travel request for the travel team.
-     */
-    public function travelReviewer(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'travel_reviewed_by');
     }
 
     /**
@@ -166,6 +154,14 @@ class TravelRequest extends Model
     public function attachments()
     {
         return $this->hasMany(TravelRequestAttachment::class)->orderBy('created_at');
+    }
+
+    /**
+     * Get the expense verifications for this travel request.
+     */
+    public function expenseVerifications()
+    {
+        return $this->hasMany(ExpenseVerification::class)->orderBy('created_at', 'desc');
     }
 
     /**
@@ -464,9 +460,6 @@ class TravelRequest extends Model
 
         $this->update([
             'status' => 'travel_approved',
-            'travel_reviewed_at' => now(),
-            'travel_reviewed_by' => $reviewer->id,
-            'travel_review_comments' => $comment,
         ]);
 
         // Crear comentario de aprobación
@@ -488,9 +481,6 @@ class TravelRequest extends Model
 
         $this->update([
             'status' => 'travel_rejected',
-            'travel_reviewed_at' => now(),
-            'travel_reviewed_by' => $reviewer->id,
-            'travel_review_comments' => $reason,
         ]);
 
         // Crear comentario de rechazo
@@ -513,9 +503,6 @@ class TravelRequest extends Model
         $this->update([
             'status' => 'travel_approved',
             'custom_expenses_data' => $newCustomExpenses,
-            'travel_reviewed_at' => now(),
-            'travel_reviewed_by' => $reviewer->id,
-            'travel_review_comments' => $comment,
         ]);
 
         // Crear comentario detallado

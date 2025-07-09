@@ -44,11 +44,10 @@ class TravelRequestResource extends Resource
                 Tables\Columns\TextColumn::make('folio')
                     ->label('Folio')
                     ->searchable(['uuid'])
-                    ->copyable()
-                    ->tooltip(fn ($record): string => $record->uuid ?? 'UUID no disponible')
                     ->badge()
                     ->color('primary')
                     ->icon('heroicon-m-hashtag'),
+
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Solicitante')
                     ->searchable()
@@ -95,7 +94,7 @@ class TravelRequestResource extends Resource
                             'draft', 'pending', 'rejected', 'revision' => null,
                             'approved' => 'Pendiente',
                             'travel_review' => 'En Revisión',
-                            'travel_approved' => $record->travel_review_comments ? 'Aprobada*' : 'Aprobada',
+                            'travel_approved' => 'Aprobada',
                             'travel_rejected' => 'Rechazada',
                             default => null,
                         };
@@ -115,24 +114,10 @@ class TravelRequestResource extends Resource
                         };
                     })
                     ->icon(function ($record) {
-                        if (! $record) {
-                            return null;
-                        }
-
-                        // Mostrar icono si hubo cambios (travel_review_comments existe)
-                        if ($record->status === 'travel_approved' && $record->travel_review_comments) {
-                            return 'heroicon-o-pencil-square';
-                        }
-
                         return null;
                     })
                     ->tooltip(function ($record) {
-                        if (! $record || ! $record->travel_review_comments) {
-                            return null;
-                        }
-
-                        return 'Revisado por: '.($record->travelReviewer?->name ?? 'Equipo de Viajes').
-                               "\nComentarios: ".$record->travel_review_comments;
+                        return null;
                     })
                     ->visible(fn ($record) => $record && in_array($record->status, ['approved', 'travel_review', 'travel_approved', 'travel_rejected'])),
                 Tables\Columns\TextColumn::make('attachments_count')
@@ -165,55 +150,25 @@ class TravelRequestResource extends Resource
                             $tooltip .= ' el '.$record->advance_deposit_made_at->format('d/m/Y H:i');
                         }
 
-                        return $tooltip;
-                    }),
-                Tables\Columns\IconColumn::make('deposit_receipt_uploaded')
-                    ->label('Comprobante')
-                    ->getStateUsing(function ($record) {
-                        if (! $record) {
-                            return false;
-                        }
-
-                        // Check if there are deposit receipt attachments
+                        // Verificar si hay comprobante
                         $depositAttachmentType = \App\Models\AttachmentType::where('slug', 'advance_deposit_receipt')->first();
-                        if (! $depositAttachmentType) {
-                            return false;
-                        }
-
-                        return $record->attachments()
-                            ->where('attachment_type_id', $depositAttachmentType->id)
-                            ->exists();
-                    })
-                    ->boolean()
-                    ->trueIcon('heroicon-o-document-check')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->tooltip(function ($record) {
-                        if (! $record) {
-                            return null;
-                        }
-
-                        $depositAttachmentType = \App\Models\AttachmentType::where('slug', 'advance_deposit_receipt')->first();
-                        if (! $depositAttachmentType) {
-                            return 'Comprobante de depósito no disponible';
-                        }
-
-                        $hasReceipt = $record->attachments()
-                            ->where('attachment_type_id', $depositAttachmentType->id)
-                            ->exists();
-
-                        if ($hasReceipt) {
-                            $receipt = $record->attachments()
+                        if ($depositAttachmentType) {
+                            $hasReceipt = $record->attachments()
                                 ->where('attachment_type_id', $depositAttachmentType->id)
-                                ->latest()
-                                ->first();
+                                ->exists();
 
-                            return 'Comprobante subido el '.$receipt->created_at->format('d/m/Y H:i').
-                                   ' por '.$receipt->uploader->name;
-                        } else {
-                            return $record->advance_deposit_made ? 'Comprobante de depósito pendiente' : 'Anticipo no depositado';
+                            if ($hasReceipt) {
+                                $receipt = $record->attachments()
+                                    ->where('attachment_type_id', $depositAttachmentType->id)
+                                    ->latest()
+                                    ->first();
+                                $tooltip .= "\n📄 Comprobante subido el ".$receipt->created_at->format('d/m/Y H:i');
+                            } else {
+                                $tooltip .= "\n⚠️ Comprobante pendiente";
+                            }
                         }
+
+                        return $tooltip;
                     }),
                 Tables\Columns\TextColumn::make('submitted_at')
                     ->label('Enviada')
@@ -221,6 +176,7 @@ class TravelRequestResource extends Resource
                     ->placeholder('No enviada')
                     ->sortable(),
             ])
+            ->recordUrl(fn ($record): string => static::getUrl('view', ['record' => $record]))
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Estado')
@@ -237,7 +193,6 @@ class TravelRequestResource extends Resource
             ])
             ->actions([
                 // Acciones principales siempre visibles
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
                     ->visible(fn ($record) => $record && $record->canBeEdited() && auth()->id() === $record->user_id),
 
@@ -382,8 +337,8 @@ class TravelRequestResource extends Resource
                         }),
                 ])
                     ->label('Equipo de Viajes')
-                    ->icon('heroicon-m-airplane-takeoff')
-                    ->color('info')
+                    ->icon('heroicon-m-map')
+                    ->color('primary')
                     ->button()
                     ->visible(fn ($record) => $record && $record->canBeTravelReviewedBy(auth()->user())),
 
@@ -536,7 +491,7 @@ class TravelRequestResource extends Resource
                 ])
                     ->label('Archivos')
                     ->icon('heroicon-m-paper-clip')
-                    ->color('slate')
+                    ->color('gray')
                     ->button()
                     ->visible(fn ($record) => $record && (
                         $record->canUploadAttachments(auth()->user()) ||
@@ -700,7 +655,7 @@ class TravelRequestResource extends Resource
                 ])
                     ->label('Tesorería')
                     ->icon('heroicon-m-banknotes')
-                    ->color('emerald')
+                    ->color('success')
                     ->button()
                     ->visible(fn ($record) => $record && auth()->user()->isTreasuryTeamMember() &&
                         ($record->canMarkAdvanceDeposit(auth()->user()) ||
@@ -711,6 +666,9 @@ class TravelRequestResource extends Resource
                 Tables\Actions\DeleteBulkAction::make()
                     ->visible(fn () => auth()->user()->can('delete_travel_requests')),
             ])
+            ->recordUrl(
+                fn ($record): string => static::getUrl('view', ['record' => $record])
+            )
             ->defaultSort('created_at', 'desc');
     }
 

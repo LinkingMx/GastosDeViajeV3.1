@@ -388,6 +388,76 @@ class ViewTravelRequest extends ViewRecord
                             ->columnSpanFull(),
                     ]),
 
+                Section::make('Archivos Adjuntos')
+                    ->schema([
+                        TextEntry::make('id')
+                            ->label('Lista de Adjuntos')
+                            ->formatStateUsing(function ($state, $record) {
+                                $html = '<div class="space-y-4">';
+                                $html .= '<p><strong>ID de Solicitud:</strong> '.$record->id.'</p>';
+
+                                $attachments = $record->attachments;
+                                $html .= '<p><strong>Total de adjuntos:</strong> '.$attachments->count().'</p>';
+
+                                if ($attachments->count() > 0) {
+                                    foreach ($attachments as $attachment) {
+                                        $typeLabel = $attachment->attachmentType?->name ?? 'Sin tipo';
+                                        $uploaderName = $attachment->uploader?->name ?? 'Sin Usuario';
+                                        $uploadDate = $attachment->created_at->format('d/m/Y H:i');
+                                        $fileSize = $attachment->file_size ? number_format($attachment->file_size / 1024, 1).' KB' : 'Desconocido';
+
+                                        $html .= '
+                                            <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm">
+                                                <div class="flex items-start justify-between">
+                                                    <div class="flex-1">
+                                                        <div class="flex items-center mb-2">
+                                                            <svg class="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
+                                                            </svg>
+                                                            <h4 class="font-semibold text-gray-900 dark:text-white">'.htmlspecialchars($attachment->file_name).'</h4>
+                                                        </div>
+                                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600 dark:text-gray-400">
+                                                            <div>
+                                                                <span class="font-medium">Tipo:</span> 
+                                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                                                    '.htmlspecialchars($typeLabel).'
+                                                                </span>
+                                                            </div>
+                                                            <div>
+                                                                <span class="font-medium">Subido por:</span> '.htmlspecialchars($uploaderName).'
+                                                            </div>
+                                                            <div>
+                                                                <span class="font-medium">Fecha:</span> '.$uploadDate.'
+                                                            </div>
+                                                        </div>
+                                                        <div class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                                                            <span class="font-medium">Tamaño:</span> '.$fileSize.'
+                                                        </div>
+                                                    </div>
+                                                    <div class="ml-4">
+                                                        <a href="'.route('attachments.download', $attachment).'" 
+                                                           class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
+                                                            </svg>
+                                                            Descargar
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ';
+                                    }
+                                } else {
+                                    $html .= '<p>No hay adjuntos</p>';
+                                }
+
+                                $html .= '</div>';
+
+                                return new HtmlString($html);
+                            })
+                            ->columnSpanFull(),
+                    ]),
+
                 Section::make('Historial de Comentarios')
                     ->schema([
                         TextEntry::make('created_at')
