@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class ExpenseVerification extends Model
@@ -54,6 +55,30 @@ class ExpenseVerification extends Model
     }
 
     /**
+     * Relación con los comprobantes de gastos
+     */
+    public function receipts(): HasMany
+    {
+        return $this->hasMany(ExpenseReceipt::class);
+    }
+
+    /**
+     * Relación con los comprobantes no deducibles
+     */
+    public function nonDeductibleReceipts(): HasMany
+    {
+        return $this->hasMany(ExpenseReceipt::class)->where('receipt_type', 'non_deductible');
+    }
+
+    /**
+     * Relación con los comprobantes fiscales
+     */
+    public function fiscalReceipts(): HasMany
+    {
+        return $this->hasMany(ExpenseReceipt::class)->where('receipt_type', 'fiscal');
+    }
+
+    /**
      * Accessor para obtener el folio formateado
      */
     public function getFolioAttribute(): string
@@ -83,5 +108,126 @@ class ExpenseVerification extends Model
     public function scopeCreatedBy($query, $userId)
     {
         return $query->where('created_by', $userId);
+    }
+
+    /**
+     * Obtener gastos pendientes por concepto (desde custom_expenses y per_diems)
+     */
+    public function getPendingExpensesByCategory(): array
+    {
+        if (!$this->travelRequest) {
+            return [];
+        }
+
+        $pendingExpenses = [];
+        
+        // 1. Obtener gastos personalizados (custom_expenses_data)
+        $customExpenses = $this->travelRequest->custom_expenses_data ?? [];
+        foreach ($customExpenses as $expense) {
+            if (!empty($expense['amount']) && !empty($expense['concept'])) {
+                $conceptName = trim($expense['concept']);
+                $pendingExpenses[$conceptName] = [
+                    'name' => $conceptName,
+                    'amount' => (float) $expense['amount'],
+                    'description' => $expense['justification'] ?? '',
+                    'source' => 'custom_expense',
+                ];
+            }
+        }
+        
+        // 2. Obtener viáticos habilitados (per_diem_data)
+        $perDiemData = $this->travelRequest->per_diem_data ?? [];
+        if (!empty($perDiemData)) {
+            $user = $this->travelRequest->user;
+            $requestType = $this->travelRequest->request_type;
+            
+            if ($user && $user->position_id && $requestType) {
+                $departureDate = $this->travelRequest->departure_date;
+                $returnDate = $this->travelRequest->return_date;
+                
+                if ($departureDate && $returnDate) {
+                    $totalDays = max(1, $departureDate->diffInDays($returnDate) + 1);
+                    
+                    $perDiems = \App\Models\PerDiem::with(['detail.concept'])
+                        ->where('position_id', $user->position_id)
+                        ->where('scope', $requestType)
+                        ->get();
+                        
+                    foreach ($perDiems as $perDiem) {
+                        $isEnabled = isset($perDiemData[$perDiem->id]) && 
+                                   ($perDiemData[$perDiem->id]['enabled'] ?? false);
+                                   
+                        if ($isEnabled && $perDiem->detail) {
+                            $detailName = $perDiem->detail->name;
+                            $amount = $totalDays * $perDiem->amount;
+                            
+                            $pendingExpenses[$detailName] = [
+                                'name' => $detailName,
+                                'amount' => $amount,
+                                'description' => 'Viático estándar por ' . $totalDays . ' días',
+                                'source' => 'per_diem',
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $pendingExpenses;
+    }
+
+    /**
+     * Obtener total comprobado por detalle de gasto
+     */
+    public function getProvenExpensesByCategory(): array
+    {
+        $provenByDetail = [];
+        
+        foreach ($this->receipts as $receipt) {
+            if ($receipt->expense_detail_id && $receipt->expenseDetail) {
+                $detailName = $receipt->expenseDetail->name;
+                if (!isset($provenByDetail[$detailName])) {
+                    $provenByDetail[$detailName] = 0;
+                }
+                $provenByDetail[$detailName] += $receipt->applied_amount ?? $receipt->total_amount;
+            }
+        }
+        
+        return $provenByDetail;
+    }
+
+    /**
+     * Obtener resumen de comprobación de gastos
+     */
+    public function getExpenseVerificationSummary(): array
+    {
+        $pending = $this->getPendingExpensesByCategory();
+        $proven = $this->getProvenExpensesByCategory();
+        
+        $summary = [];
+        
+        // Agregar gastos pendientes
+        foreach ($pending as $category => $data) {
+            $summary[$category] = [
+                'name' => $data['name'],
+                'pending' => $data['amount'],
+                'proven' => $proven[$category] ?? 0,
+                'remaining' => $data['amount'] - ($proven[$category] ?? 0),
+            ];
+        }
+        
+        // Agregar gastos comprobados que no están en pendientes
+        foreach ($proven as $category => $amount) {
+            if (!isset($summary[$category])) {
+                $summary[$category] = [
+                    'name' => ucfirst(str_replace('_', ' ', $category)),
+                    'pending' => 0,
+                    'proven' => $amount,
+                    'remaining' => -$amount, // Negativo indica exceso
+                ];
+            }
+        }
+        
+        return $summary;
     }
 }
