@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\TravelRequestCreated;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -54,6 +55,11 @@ class TravelRequest extends Model
             if (empty($model->uuid)) {
                 $model->uuid = (string) Str::uuid();
             }
+        });
+
+        static::created(function ($model) {
+            // Disparar evento solo cuando se crea una nueva solicitud
+            TravelRequestCreated::dispatch($model);
         });
     }
 

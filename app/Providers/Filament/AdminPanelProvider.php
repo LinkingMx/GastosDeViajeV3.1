@@ -59,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
             ->homeUrl('/admin/travel-requests') // Redirección directa a solicitudes de viajes
             ->sidebarCollapsibleOnDesktop() // Sidebar colapsable para mejor UX
             ->breadcrumbs(false) // Simplificar navegación
+            ->databaseNotifications() // Habilitar notificaciones en base de datos
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '<meta name="csrf-token" content="' . csrf_token() . '">'

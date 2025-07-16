@@ -34,7 +34,7 @@ class TravelRequestCreated extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Confirmación de Registro de Solicitud de Viaje',
+            subject: 'Solicitud de Viaje Creada - Folio: ' . $this->travelRequest->folio,
         );
     }
 
