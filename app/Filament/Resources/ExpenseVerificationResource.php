@@ -3,6 +3,8 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ExpenseVerificationResource\Pages;
+use App\Filament\Resources\ExpenseVerificationResource\Pages\ListActiveExpenseVerifications;
+use App\Filament\Resources\ExpenseVerificationResource\Pages\ListHistoricalExpenseVerifications;
 use App\Models\ExpenseVerification;
 use App\Models\TravelRequest;
 use App\Models\User;
@@ -455,169 +457,7 @@ class ExpenseVerificationResource extends Resource
                             );
                     }),
             ])
-            ->actions([
-                // Acción principal de editar (solo en draft/revision por el propietario)
-                Tables\Actions\EditAction::make()
-                    ->visible(fn ($record) => $record && $record->canBeEdited() && auth()->id() === $record->created_by),
-
-                // Grupo de acciones del propietario
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('submit_for_authorization')
-                        ->label('Enviar a Autorización')
-                        ->icon('heroicon-o-paper-airplane')
-                        ->color('primary')
-                        ->visible(fn ($record) => $record && $record->canBeSubmitted() && auth()->id() === $record->created_by)
-                        ->requiresConfirmation()
-                        ->modalHeading('Enviar Comprobación a Autorización')
-                        ->modalDescription('Al enviar esta comprobación, será revisada por el equipo de viajes. ¿Estás seguro?')
-                        ->action(function ($record) {
-                            $record->submitForAuthorization();
-                            \Filament\Notifications\Notification::make()
-                                ->title('Comprobación Enviada')
-                                ->body('La comprobación ha sido enviada para autorización del equipo de viajes.')
-                                ->success()
-                                ->send();
-                        }),
-
-                    Tables\Actions\Action::make('put_in_revision')
-                        ->label('Poner en Revisión')
-                        ->icon('heroicon-o-pencil-square')
-                        ->color('warning')
-                        ->visible(fn ($record) => $record && $record->canBeRevisedBy(auth()->user()))
-                        ->requiresConfirmation()
-                        ->modalHeading('Poner en Revisión')
-                        ->modalDescription('Al poner la comprobación en revisión podrás editarla nuevamente.')
-                        ->action(function ($record) {
-                            $record->putInRevision();
-                            \Filament\Notifications\Notification::make()
-                                ->title('Comprobación en Revisión')
-                                ->body('La comprobación ha sido puesta en revisión.')
-                                ->success()
-                                ->send();
-                        }),
-
-                    Tables\Actions\DeleteAction::make()
-                        ->visible(fn ($record) => $record && $record->canBeEdited() && auth()->id() === $record->created_by),
-                ])
-                    ->label('Mis Acciones')
-                    ->icon('heroicon-m-user')
-                    ->color('info')
-                    ->button()
-                    ->visible(fn ($record) => $record && auth()->id() === $record->created_by && (
-                        $record->canBeSubmitted() || 
-                        $record->canBeRevisedBy(auth()->user()) || 
-                        $record->canBeEdited()
-                    )),
-
-                // Grupo de acciones de autorización (equipo de viajes)
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('approve')
-                        ->label('Aprobar')
-                        ->icon('heroicon-o-check-circle')
-                        ->color('success')
-                        ->visible(fn ($record) => $record && $record->canBeAuthorizedBy(auth()->user()))
-                        ->form([
-                            \Filament\Forms\Components\Textarea::make('approval_notes')
-                                ->label('Comentarios (opcional)')
-                                ->placeholder('Agregar comentarios sobre la aprobación...'),
-                        ])
-                        ->action(function ($record, array $data) {
-                            $record->approve(auth()->user(), $data['approval_notes'] ?? null);
-                            \Filament\Notifications\Notification::make()
-                                ->title('Comprobación Aprobada')
-                                ->body('La comprobación de gastos ha sido aprobada exitosamente.')
-                                ->success()
-                                ->send();
-                        }),
-
-                    Tables\Actions\Action::make('reject')
-                        ->label('Rechazar')
-                        ->icon('heroicon-o-x-circle')
-                        ->color('danger')
-                        ->visible(fn ($record) => $record && $record->canBeAuthorizedBy(auth()->user()))
-                        ->form([
-                            \Filament\Forms\Components\Textarea::make('approval_notes')
-                                ->label('Motivo del rechazo')
-                                ->placeholder('Explica el motivo del rechazo...')
-                                ->required(),
-                        ])
-                        ->action(function ($record, array $data) {
-                            $record->reject(auth()->user(), $data['approval_notes']);
-                            \Filament\Notifications\Notification::make()
-                                ->title('Comprobación Rechazada')
-                                ->body('La comprobación de gastos ha sido rechazada.')
-                                ->success()
-                                ->send();
-                        }),
-                ])
-                    ->label('Autorización')
-                    ->icon('heroicon-m-check-badge')
-                    ->color('warning')
-                    ->button()
-                    ->visible(fn ($record) => $record && $record->canBeAuthorizedBy(auth()->user())),
-
-                // Grupo de acciones de reembolso (equipo de tesorería)
-                Tables\Actions\ActionGroup::make([
-                    Tables\Actions\Action::make('mark_reimbursement')
-                        ->label('Marcar Reembolso')
-                        ->icon('heroicon-o-banknotes')
-                        ->color('success')
-                        ->visible(fn ($record) => $record && $record->canBeReimbursedBy(auth()->user()))
-                        ->form([
-                            \Filament\Forms\Components\TextInput::make('reimbursement_amount')
-                                ->label('Monto del Reembolso')
-                                ->prefix('$')
-                                ->numeric()
-                                ->step(0.01)
-                                ->required()
-                                ->default(function ($record) {
-                                    return $record ? $record->getReimbursementAmountNeeded() : 0;
-                                })
-                                ->helperText(function ($record) {
-                                    if (!$record) return '';
-                                    $needed = $record->getReimbursementAmountNeeded();
-                                    return "Monto sugerido: $" . number_format($needed, 2);
-                                }),
-                            
-                            \Filament\Forms\Components\Textarea::make('reimbursement_notes')
-                                ->label('Comentarios del Reembolso')
-                                ->placeholder('Agregar comentarios sobre el reembolso realizado...'),
-                            
-                            \Filament\Forms\Components\FileUpload::make('reimbursement_attachments')
-                                ->label('Comprobantes del Reembolso')
-                                ->multiple()
-                                ->directory('reimbursement-attachments')
-                                ->acceptedFileTypes(['application/pdf', 'image/jpeg', 'image/png'])
-                                ->helperText('Sube los comprobantes del reembolso (PDF, JPG, PNG)'),
-                        ])
-                        ->action(function ($record, array $data) {
-                            $attachments = [];
-                            if (!empty($data['reimbursement_attachments'])) {
-                                foreach ($data['reimbursement_attachments'] as $file) {
-                                    $attachments[] = $file;
-                                }
-                            }
-                            
-                            $record->markReimbursementMade(
-                                auth()->user(),
-                                $data['reimbursement_amount'],
-                                $data['reimbursement_notes'] ?? null,
-                                $attachments ?: null
-                            );
-                            
-                            \Filament\Notifications\Notification::make()
-                                ->title('Reembolso Registrado')
-                                ->body('El reembolso ha sido registrado exitosamente. La comprobación está ahora cerrada.')
-                                ->success()
-                                ->send();
-                        }),
-                ])
-                    ->label('Reembolso')
-                    ->icon('heroicon-m-banknotes')
-                    ->color('info')
-                    ->button()
-                    ->visible(fn ($record) => $record && $record->canBeReimbursedBy(auth()->user())),
-            ])
+            ->actions([])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
@@ -657,7 +497,7 @@ class ExpenseVerificationResource extends Resource
             return $query;
         }
 
-        // Los miembros del equipo de viajes pueden ver comprobaciones pendientes de autorización
+        // Los miembros del equipo de viajes pueden ver comprobaciones pendientes de autorización y todas las históricas
         if ($user->isTravelTeamMember()) {
             return $query->where(function ($query) use ($user) {
                 // Sus propias comprobaciones
@@ -665,11 +505,15 @@ class ExpenseVerificationResource extends Resource
                     $q->where('user_id', $user->id);
                 })
                 // O comprobaciones pendientes de autorización de cualquier usuario
-                ->orWhere('status', 'pending');
+                ->orWhere('status', 'pending')
+                // O comprobaciones procesadas/históricas de cualquier usuario (para gestión)
+                ->orWhereIn('status', ['approved', 'rejected', 'closed'])
+                // O comprobaciones con estado de reembolso (históricas)
+                ->orWhereNotNull('reimbursement_status');
             });
         }
 
-        // Los miembros del equipo de tesorería pueden ver comprobaciones que necesitan reembolso
+        // Los miembros del equipo de tesorería pueden ver comprobaciones que necesitan reembolso y todas las históricas
         if ($user->isTreasuryTeamMember()) {
             return $query->where(function ($query) use ($user) {
                 // Sus propias comprobaciones
@@ -679,7 +523,9 @@ class ExpenseVerificationResource extends Resource
                 // O comprobaciones en proceso de reembolso
                 ->orWhere('reimbursement_status', 'pending_reimbursement')
                 // O comprobaciones reembolsadas para seguimiento
-                ->orWhere('reimbursement_status', 'reimbursed');
+                ->orWhere('reimbursement_status', 'reimbursed')
+                // O comprobaciones procesadas/históricas de cualquier usuario (para gestión)
+                ->orWhereIn('status', ['approved', 'rejected', 'closed']);
             });
         }
 

@@ -118,6 +118,9 @@ class EditTravelRequest extends EditRecord
                 ->relationship('branch', 'name')
                 ->label('Centro de costos principal')
                 ->required()
+                ->validationMessages([
+                    'required' => 'El centro de costos principal es obligatorio.',
+                ])
                 ->disabled($isDisabled)
                 ->columnSpanFull(),
 
@@ -134,11 +137,21 @@ class EditTravelRequest extends EditRecord
                     ->searchable()
                     ->preload()
                     ->disabled($isDisabled)
-                    ->required(),
+                    ->required()
+                    ->validationMessages([
+                        'required' => 'El país de origen es obligatorio.',
+                    ]),
                 TextInput::make('origin_city')
                     ->label('Ciudad Origen')
                     ->disabled($isDisabled)
-                    ->required(),
+                    ->required()
+                    ->validationMessages([
+                        'required' => 'La ciudad de origen es obligatoria.',
+                        'min' => 'La ciudad de origen debe tener al menos 2 caracteres.',
+                        'max' => 'La ciudad de origen no puede tener más de 100 caracteres.',
+                    ])
+                    ->minLength(2)
+                    ->maxLength(100),
             ]),
             Grid::make(2)->schema([
                 Select::make('destination_country_id')
@@ -152,26 +165,52 @@ class EditTravelRequest extends EditRecord
                         $country = Country::find($state);
                         $set('request_type', $country?->is_foreign ? 'foreign' : 'domestic');
                     })
-                    ->required(),
+                    ->required()
+                    ->validationMessages([
+                        'required' => 'El país de destino es obligatorio.',
+                    ]),
                 TextInput::make('destination_city')
                     ->label('Ciudad Destino')
                     ->disabled($isDisabled)
-                    ->required(),
+                    ->required()
+                    ->validationMessages([
+                        'required' => 'La ciudad de destino es obligatoria.',
+                        'min' => 'La ciudad de destino debe tener al menos 2 caracteres.',
+                        'max' => 'La ciudad de destino no puede tener más de 100 caracteres.',
+                    ])
+                    ->minLength(2)
+                    ->maxLength(100),
             ]),
             Grid::make(2)->schema([
                 DatePicker::make('departure_date')
                     ->label('Fecha Salida')
                     ->disabled($isDisabled)
-                    ->required(),
+                    ->required()
+                    ->validationMessages([
+                        'required' => 'La fecha de salida es obligatoria.',
+                        'before' => 'La fecha de salida debe ser anterior a la fecha de regreso.',
+                    ])
+                    ->before('return_date'),
                 DatePicker::make('return_date')
                     ->label('Fecha Regreso')
                     ->disabled($isDisabled)
-                    ->required(),
+                    ->required()
+                    ->validationMessages([
+                        'required' => 'La fecha de regreso es obligatoria.',
+                        'after' => 'La fecha de regreso debe ser posterior a la fecha de salida.',
+                    ])
+                    ->after('departure_date'),
             ]),
             Textarea::make('notes')
                 ->label('Notas / Justificación del Viaje')
                 ->disabled($isDisabled)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                ->rows(3)
+                ->maxLength(1000)
+                ->validationMessages([
+                    'max' => 'Las notas no pueden tener más de 1000 caracteres.',
+                ])
+                ->placeholder('Describe brevemente el propósito del viaje y cualquier información relevante.'),
         ]);
 
         return $schema;
@@ -312,7 +351,13 @@ class EditTravelRequest extends EditRecord
                             Textarea::make("additional_services.{$service->id}.notes")
                                 ->label($label)
                                 ->disabled($isDisabled)
-                                ->visible(fn (Get $get) => $get("additional_services.{$service->id}.enabled")),
+                                ->visible(fn (Get $get) => $get("additional_services.{$service->id}.enabled"))
+                                ->maxLength(300)
+                                ->validationMessages([
+                                    'max' => 'Las notas no pueden tener más de 300 caracteres.',
+                                ])
+                                ->rows(3)
+                                ->placeholder('Especifica detalles o preferencias para este servicio.'),
                         ]);
                     }
 
@@ -388,7 +433,13 @@ class EditTravelRequest extends EditRecord
                             Textarea::make("per_diem_data.{$perDiem->id}.notes")
                                 ->label('Notas')
                                 ->disabled($isDisabled)
-                                ->visible(fn (Get $get) => $get("per_diem_data.{$perDiem->id}.enabled")),
+                                ->visible(fn (Get $get) => $get("per_diem_data.{$perDiem->id}.enabled"))
+                                ->maxLength(200)
+                                ->validationMessages([
+                                    'max' => 'Las notas no pueden tener más de 200 caracteres.',
+                                ])
+                                ->rows(2)
+                                ->placeholder('Notas adicionales para este viático (opcional).'),
                         ]);
                     }
 
@@ -404,9 +455,44 @@ class EditTravelRequest extends EditRecord
                         ->columns(3)
                         ->disabled($isDisabled)
                         ->schema([
-                            TextInput::make('concept')->label('Concepto')->required(),
-                            TextInput::make('amount')->label('Monto')->numeric()->prefix('$')->required(),
-                            Textarea::make('justification')->label('Justificación')->columnSpanFull()->required(),
+                            TextInput::make('concept')
+                                ->label('Concepto')
+                                ->required()
+                                ->validationMessages([
+                                    'required' => 'El concepto del gasto es obligatorio.',
+                                    'min' => 'El concepto debe tener al menos 3 caracteres.',
+                                    'max' => 'El concepto no puede tener más de 100 caracteres.',
+                                ])
+                                ->minLength(3)
+                                ->maxLength(100)
+                                ->placeholder('Ej: Transporte local, Materiales, etc.'),
+                            TextInput::make('amount')
+                                ->label('Monto')
+                                ->numeric()
+                                ->prefix('$')
+                                ->required()
+                                ->validationMessages([
+                                    'required' => 'El monto del gasto es obligatorio.',
+                                    'min' => 'El monto debe ser mayor a $0.01.',
+                                    'max' => 'El monto no puede ser mayor a $999,999.99.',
+                                ])
+                                ->minValue(0.01)
+                                ->maxValue(999999.99)
+                                ->step(0.01)
+                                ->placeholder('0.00'),
+                            Textarea::make('justification')
+                                ->label('Justificación')
+                                ->columnSpanFull()
+                                ->required()
+                                ->validationMessages([
+                                    'required' => 'La justificación del gasto es obligatoria.',
+                                    'min' => 'La justificación debe tener al menos 10 caracteres.',
+                                    'max' => 'La justificación no puede tener más de 500 caracteres.',
+                                ])
+                                ->minLength(10)
+                                ->maxLength(500)
+                                ->rows(2)
+                                ->placeholder('Explica por qué es necesario este gasto para el viaje.'),
                         ])
                         ->addActionLabel('Agregar Gasto'),
                 ]),

@@ -26,6 +26,15 @@ class ExpenseVerification extends Model
         'reimbursement_amount',
         'reimbursement_notes',
         'reimbursement_attachments',
+        'is_reopened',
+        'reopened_at',
+        'reopened_by',
+        'reopening_reason',
+        'administrative_notes',
+        'audit_log',
+        'is_archived',
+        'archived_at',
+        'archived_by',
     ];
 
     protected $casts = [
@@ -35,6 +44,9 @@ class ExpenseVerification extends Model
         'rejected_at' => 'datetime',
         'reimbursement_made_at' => 'datetime',
         'reimbursement_attachments' => 'array',
+        'reopened_at' => 'datetime',
+        'audit_log' => 'array',
+        'archived_at' => 'datetime',
     ];
 
     /**
@@ -86,6 +98,22 @@ class ExpenseVerification extends Model
     public function reimbursementMadeBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reimbursement_made_by');
+    }
+
+    /**
+     * Relación con el usuario que reabrió la comprobación
+     */
+    public function reopenedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reopened_by');
+    }
+
+    /**
+     * Relación con el usuario que archivó la comprobación
+     */
+    public function archivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'archived_by');
     }
 
     /**
@@ -492,5 +520,177 @@ class ExpenseVerification extends Model
         if ($this->needsReimbursement()) {
             $this->markForReimbursement();
         }
+    }
+
+    /**
+     * Scopes for filtering
+     */
+    public function scopeActive($query)
+    {
+        return $query->whereIn('status', ['draft', 'pending', 'revision']);
+    }
+
+    public function scopeProcessed($query)
+    {
+        return $query->whereIn('status', ['approved', 'rejected', 'closed'])
+                    ->orWhereNotNull('reimbursement_status');
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->where('is_archived', true);
+    }
+
+    public function scopeNotArchived($query)
+    {
+        return $query->where('is_archived', false);
+    }
+
+    /**
+     * Check if verification can be reopened by user.
+     */
+    public function canBeReopenedBy(User $user): bool
+    {
+        return ($this->status === 'closed' || $this->status === 'approved') && 
+               ($user->isTravelTeamMember() || $user->isTreasuryTeamMember()) &&
+               !$this->is_archived;
+    }
+
+    /**
+     * Check if verification can be archived by user.
+     */
+    public function canBeArchivedBy(User $user): bool
+    {
+        return $this->status === 'closed' && 
+               ($user->isTravelTeamMember() || $user->isTreasuryTeamMember()) &&
+               !$this->is_archived;
+    }
+
+    /**
+     * Reopen the verification for editing.
+     */
+    public function reopen(User $user, string $reason): void
+    {
+        $this->logAuditChange('reopened', [
+            'previous_status' => $this->status,
+            'previous_reimbursement_status' => $this->reimbursement_status,
+            'reason' => $reason,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+        ]);
+
+        $this->update([
+            'status' => 'revision',
+            'reimbursement_status' => null,
+            'is_reopened' => true,
+            'reopened_at' => now(),
+            'reopened_by' => $user->id,
+            'reopening_reason' => $reason,
+        ]);
+    }
+
+    /**
+     * Archive the verification.
+     */
+    public function archive(User $user, ?string $reason = null): void
+    {
+        $this->logAuditChange('archived', [
+            'reason' => $reason,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+        ]);
+
+        $this->update([
+            'is_archived' => true,
+            'archived_at' => now(),
+            'archived_by' => $user->id,
+            'administrative_notes' => $reason,
+        ]);
+    }
+
+    /**
+     * Add administrative notes.
+     */
+    public function addAdministrativeNote(User $user, string $note): void
+    {
+        $this->logAuditChange('administrative_note_added', [
+            'note' => $note,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+        ]);
+
+        $currentNotes = $this->administrative_notes ?? '';
+        $timestamp = now()->format('d/m/Y H:i');
+        $newNote = "\n[{$timestamp} - {$user->name}]: {$note}";
+        
+        $this->update([
+            'administrative_notes' => $currentNotes . $newNote,
+        ]);
+    }
+
+    /**
+     * Log audit changes.
+     */
+    protected function logAuditChange(string $action, array $data): void
+    {
+        $currentLog = $this->audit_log ?? [];
+        
+        $currentLog[] = [
+            'action' => $action,
+            'data' => $data,
+            'timestamp' => now()->toISOString(),
+            'ip_address' => request()->ip(),
+        ];
+
+        $this->update(['audit_log' => $currentLog]);
+    }
+
+    /**
+     * Get audit history formatted for display.
+     */
+    public function getAuditHistoryAttribute(): array
+    {
+        return collect($this->audit_log ?? [])->map(function ($entry) {
+            return [
+                'action' => $this->formatAuditAction($entry['action']),
+                'data' => $entry['data'],
+                'timestamp' => \Carbon\Carbon::parse($entry['timestamp'])->format('d/m/Y H:i:s'),
+                'user' => $entry['data']['user_name'] ?? 'Sistema',
+            ];
+        })->toArray();
+    }
+
+    /**
+     * Format audit action for display.
+     */
+    protected function formatAuditAction(string $action): string
+    {
+        return match ($action) {
+            'reopened' => 'Reabierta',
+            'archived' => 'Archivada',
+            'administrative_note_added' => 'Nota Administrativa Agregada',
+            'status_changed' => 'Estado Cambiado',
+            'reimbursement_processed' => 'Reembolso Procesado',
+            default => ucfirst(str_replace('_', ' ', $action)),
+        };
+    }
+
+    /**
+     * Check if this is a historical record (processed/closed).
+     */
+    public function isHistorical(): bool
+    {
+        return in_array($this->status, ['approved', 'rejected', 'closed']) || 
+               !is_null($this->reimbursement_status);
+    }
+
+    /**
+     * Get status badge for historical view.
+     */
+    public function getHistoricalStatusDisplayAttribute(): string
+    {
+        if ($this->is_archived) return 'Archivada';
+        if ($this->is_reopened) return 'Reabierta';
+        return $this->combined_status_display;
     }
 }
