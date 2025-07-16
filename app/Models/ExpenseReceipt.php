@@ -19,6 +19,8 @@ class ExpenseReceipt extends Model
         'pdf_file_path',
         'photo_file_path',
         'cfdi_uuid',
+        'uuid',
+        'concept',
         'status',
         'notes',
         'expense_detail_id',

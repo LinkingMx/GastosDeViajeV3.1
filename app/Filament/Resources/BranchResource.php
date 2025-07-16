@@ -47,14 +47,50 @@ class BranchResource extends Resource
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(ignoreRecord: true)
-                                    ->helperText('Código único del centro de costo'),
+                                    ->helperText('Código único del centro de costo')
+                                    ->rule('min:3')
+                                    ->rule('regex:/^[^\s]+$/')
+                                    ->validationMessages([
+                                        'min' => 'El código de centro de costo debe tener al menos 3 caracteres.',
+                                        'regex' => 'El código de centro de costo no puede contener espacios.',
+                                    ]),
                             ]),
 
                         Forms\Components\TextInput::make('tax_id')
                             ->label('RFC')
                             ->maxLength(13)
-                            ->minLength(13)
-                            ->helperText('RFC de 13 caracteres (opcional)'),
+                            ->minLength(12)
+                            ->helperText('RFC de 12 ó 13 caracteres (opcional)')
+                            ->rule('regex:/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/')
+                            ->validationMessages([
+                                'regex' => 'El formato del RFC no es correcto.',
+                                'min' => 'El RFC debe tener al menos 12 caracteres.',
+                                'max' => 'El RFC no puede tener más de 13 caracteres.',
+                            ])
+                            ->rule(function () {
+                                return function (string $attribute, $value, \Closure $fail) {
+                                    if (empty($value)) {
+                                        return; // RFC es opcional
+                                    }
+
+                                    // Limpiar RFC
+                                    $rfc = preg_replace('/[\s\-]/', '', strtoupper($value));
+
+                                    // Validar longitud
+                                    if (strlen($rfc) !== 12 && strlen($rfc) !== 13) {
+                                        $fail('El RFC debe tener 12 caracteres (persona moral) o 13 caracteres (persona física).');
+                                        return;
+                                    }
+
+                                    // Validar formato
+                                    if (!preg_match('/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/', $rfc)) {
+                                        $fail('El formato del RFC no es correcto.');
+                                        return;
+                                    }
+                                };
+                            })
+                            ->formatStateUsing(fn ($state) => $state ? strtoupper(str_replace([' ', '-'], '', $state)) : $state)
+                            ->dehydrateStateUsing(fn ($state) => $state ? strtoupper(str_replace([' ', '-'], '', $state)) : $state),
                     ]),
             ]);
     }

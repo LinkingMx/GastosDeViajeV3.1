@@ -80,6 +80,7 @@ class TravelRequestResource extends Resource
                         'travel_review' => 'info',
                         'travel_approved' => 'success',
                         'travel_rejected' => 'danger',
+                        'pending_verification' => 'purple',
                         default => 'gray',
                     }),
 
@@ -96,6 +97,7 @@ class TravelRequestResource extends Resource
                             'travel_review' => 'En Revisión',
                             'travel_approved' => 'Aprobada',
                             'travel_rejected' => 'Rechazada',
+                            'pending_verification' => 'Por Comprobar',
                             default => null,
                         };
                     })
@@ -110,6 +112,7 @@ class TravelRequestResource extends Resource
                             'travel_review' => 'info',
                             'travel_approved' => 'success',
                             'travel_rejected' => 'danger',
+                            'pending_verification' => 'purple',
                             default => 'gray',
                         };
                     })
@@ -119,7 +122,7 @@ class TravelRequestResource extends Resource
                     ->tooltip(function ($record) {
                         return null;
                     })
-                    ->visible(fn ($record) => $record && in_array($record->status, ['approved', 'travel_review', 'travel_approved', 'travel_rejected'])),
+                    ->visible(fn ($record) => $record && in_array($record->status, ['approved', 'travel_review', 'travel_approved', 'travel_rejected', 'pending_verification'])),
                 Tables\Columns\TextColumn::make('attachments_count')
                     ->label('Archivos')
                     ->counts('attachments')
@@ -189,6 +192,7 @@ class TravelRequestResource extends Resource
                         'travel_review' => 'En Revisión de Viajes',
                         'travel_approved' => 'Aprobada Final',
                         'travel_rejected' => 'Rechazada por Viajes',
+                        'pending_verification' => 'Por Comprobar',
                     ]),
             ])
             ->actions([
@@ -660,7 +664,7 @@ class TravelRequestResource extends Resource
                     ->visible(fn ($record) => $record && auth()->user()->isTreasuryTeamMember() &&
                         ($record->canMarkAdvanceDeposit(auth()->user()) ||
                          $record->canUnmarkAdvanceDeposit(auth()->user()) ||
-                         ($record->advance_deposit_made && $record->status === 'travel_approved'))),
+                         ($record->advance_deposit_made && in_array($record->status, ['travel_approved', 'pending_verification'])))),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
@@ -726,6 +730,12 @@ class TravelRequestResource extends Resource
                     // NUEVO: Solicitudes aprobadas/rechazadas por el equipo de viajes (para seguimiento)
                     if ($user->isTravelTeamMember()) {
                         $query->whereIn('status', ['travel_approved', 'travel_rejected']);
+                    }
+                })
+                ->orWhere(function (Builder $query) use ($user) {
+                    // NUEVO: Solicitudes para miembros del equipo de tesorería
+                    if ($user->isTreasuryTeamMember()) {
+                        $query->whereIn('status', ['travel_approved', 'pending_verification']);
                     }
                 });
         });

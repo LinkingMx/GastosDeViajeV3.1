@@ -1,0 +1,2271 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\ExpenseVerificationResource\Pages;
+use App\Models\ExpenseVerification;
+use App\Models\TravelRequest;
+use App\Models\User;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\HtmlString;
+
+class ExpenseVerificationResource extends Resource
+{
+    protected static ?string $model = ExpenseVerification::class;
+    protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-check';
+    protected static ?string $navigationLabel = 'Comprobaciones de Gastos';
+    protected static ?string $modelLabel = 'Comprobación de Gastos';
+    protected static ?string $pluralModelLabel = 'Comprobaciones de Gastos';
+    protected static ?int $navigationSort = 1;
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\Section::make('Información de la Comprobación')
+                    ->icon('heroicon-o-information-circle')
+                    ->schema([
+                        Forms\Components\Select::make('travel_request_id')
+                            ->label('Solicitud de Viaje')
+                            ->options(function () {
+                                return TravelRequest::with(['user', 'destinationCountry'])
+                                    ->where('advance_deposit_made', true)
+                                    ->whereIn('status', ['travel_approved']) // Solo solicitudes aprobadas finalmente
+                                    ->get()
+                                    ->mapWithKeys(function ($request) {
+                                        $departureDate = $request->departure_date ? $request->departure_date->format('d/m/Y') : 'Sin fecha';
+                                        $destination = $request->destination_city
+                                            ? $request->destination_city.', '.($request->destinationCountry?->name ?? 'Sin país')
+                                            : ($request->destinationCountry?->name ?? 'Sin destino');
+
+                                        $label = $request->folio.' - '.$departureDate.' - '.$destination;
+
+                                        return [$request->id => $label];
+                                    });
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->helperText('Solo se muestran solicitudes aprobadas finalmente con depósito de anticipo confirmado'),
+
+                        Forms\Components\TextInput::make('uuid')
+                            ->label('Folio UUID')
+                            ->disabled()
+                            ->helperText('Se generará automáticamente al crear la comprobación')
+                            ->hiddenOn('create'),
+                    ])
+                    ->columns(2)
+                    ->collapsible(),
+
+                Forms\Components\Section::make('Información de la Solicitud')
+                    ->icon('heroicon-o-information-circle')
+                    ->schema([
+                        Forms\Components\View::make('filament.components.travel-request-summary')
+                            ->viewData(function (?ExpenseVerification $record) {
+                                if (! $record || ! $record->travelRequest) {
+                                    return [
+                                        'request' => null,
+                                        'message' => 'Selecciona una solicitud de viaje para ver sus detalles.',
+                                    ];
+                                }
+
+                                return [
+                                    'request' => $record->travelRequest,
+                                    'message' => null,
+                                ];
+                            })
+                            ->columnSpanFull(),
+                    ])
+                    ->hiddenOn('create')
+                    ->collapsible(),
+
+                Forms\Components\Section::make('Comprobantes No Deducibles')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        Forms\Components\Repeater::make('nonDeductibleReceipts')
+                            ->relationship('nonDeductibleReceipts')
+                            ->mutateRelationshipDataBeforeSaveUsing(function (array $data): array {
+                                // Asegurar que el tipo de recibo sea non_deductible
+                                $data['receipt_type'] = 'non_deductible';
+                                return $data;
+                            })
+                            ->schema([
+                                Forms\Components\Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('supplier_name')
+                                            ->label('Proveedor')
+                                            ->required()
+                                            ->maxLength(255)
+                                            ->placeholder('Nombre del proveedor o comercio'),
+
+                                        Forms\Components\DatePicker::make('receipt_date')
+                                            ->label('Fecha del Comprobante')
+                                            ->required()
+                                            ->default(now())
+                                            ->maxDate(now()),
+                                    ]),
+
+                                Forms\Components\Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('total_amount')
+                                            ->label('Importe Total')
+                                            ->numeric()
+                                            ->required()
+                                            ->prefix('$')
+                                            ->step(0.01)
+                                            ->minValue(0.01)
+                                            ->placeholder('0.00')
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, $set, $get) {
+                                                // Para gastos no deducibles, el monto aplicado es igual al total
+                                                if ($state && $get('expense_detail_id')) {
+                                                    $set('applied_amount', $state);
+                                                }
+                                            }),
+
+                                        Forms\Components\Select::make('expense_detail_id')
+                                            ->label('Concepto de Gasto a Comprobar')
+                                            ->relationship('expenseDetail', 'name')
+                                            ->searchable()
+                                            ->preload()
+                                            ->placeholder('Seleccionar concepto de gasto')
+                                            ->helperText('Selecciona el detalle de gasto específico que este comprobante está cubriendo')
+                                            ->getOptionLabelFromRecordUsing(function ($record) {
+                                                return $record->name . ' (' . $record->concept->name . ')';
+                                            })
+                                            ->live()
+                                            ->afterStateUpdated(function ($state, $set, $get) {
+                                                // Cuando se selecciona un concepto, sincronizar montos
+                                                if ($state && $get('total_amount')) {
+                                                    $set('applied_amount', $get('total_amount'));
+                                                }
+                                            }),
+                                    ]),
+
+                                Forms\Components\FileUpload::make('photo_file_path')
+                                    ->label('Foto del Comprobante')
+                                    ->image()
+                                    ->imageEditor()
+                                    ->directory('expense-receipts/photos')
+                                    ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/jpg', 'image/webp'])
+                                    ->required()
+                                    ->columnSpanFull(),
+
+                                Forms\Components\TextInput::make('applied_amount')
+                                    ->label('Monto Aplicado al Gasto')
+                                    ->numeric()
+                                    ->prefix('$')
+                                    ->step(0.01)
+                                    ->minValue(0.01)
+                                    ->placeholder('0.00')
+                                    ->helperText('Para gastos no deducibles, este monto debe ser igual al importe total')
+                                    ->visible(fn ($get) => !empty($get('expense_detail_id')))
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, $set, $get) {
+                                        // Para gastos no deducibles, sincronizar con total_amount
+                                        if ($state) {
+                                            $set('total_amount', $state);
+                                        }
+                                    }),
+
+                                Forms\Components\Hidden::make('receipt_type')
+                                    ->default('non_deductible'),
+
+                                Forms\Components\Textarea::make('notes')
+                                    ->label('Notas (Opcional)')
+                                    ->rows(2)
+                                    ->placeholder('Detalles adicionales del gasto...')
+                                    ->columnSpanFull(),
+
+                                Forms\Components\Placeholder::make('save_info')
+                                    ->label('')
+                                    ->content(function ($get) {
+                                        $hasRequiredFields = !empty($get('supplier_name')) && 
+                                                           !empty($get('total_amount')) && 
+                                                           !empty($get('photo_file_path'));
+                                        
+                                        if ($hasRequiredFields) {
+                                            $hasId = !empty($get('id'));
+                                            $status = $hasId ? '✅ Guardado' : '⚠️ Sin guardar';
+                                            $message = $hasId 
+                                                ? 'Este comprobante está guardado en la base de datos.' 
+                                                : 'Usa el botón "Guardar" principal para guardar este comprobante.';
+                                            
+                                            return new HtmlString(
+                                                '<div class="flex items-center gap-2 text-sm">
+                                                    <span class="font-medium">' . $status . '</span>
+                                                    <span class="text-gray-600 dark:text-gray-400">' . $message . '</span>
+                                                </div>'
+                                            );
+                                        }
+                                        
+                                        return new HtmlString(
+                                            '<div class="text-sm text-gray-500 dark:text-gray-400">
+                                                Completa los campos requeridos para guardar este comprobante.
+                                            </div>'
+                                        );
+                                    })
+                                    ->columnSpanFull(),
+                            ])
+                            ->collapsible()
+                            ->collapsed()
+                            ->cloneable()
+                            ->addActionLabel('Agregar Comprobante No Deducible')
+                            ->itemLabel(function (array $state): ?string {
+                                $supplier = $state['supplier_name'] ?? 'Nuevo comprobante';
+                                $amount = (float)($state['total_amount'] ?? 0);
+                                $concept = '';
+                                
+                                if (!empty($state['expense_detail_id'])) {
+                                    $detail = \App\Models\ExpenseDetail::find($state['expense_detail_id']);
+                                    $concept = $detail ? ' → ' . $detail->name : '';
+                                }
+                                
+                                return $supplier . $concept . ' - $' . number_format($amount, 2);
+                            })
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->reorderableWithButtons()
+                            ->live()
+                            ->afterStateUpdated(function ($state, $livewire) {
+                                // Forzar la actualización del resumen cuando cambian los comprobantes
+                                $livewire->dispatch('$refresh');
+                            })
+                            ->deleteAction(
+                                fn ($action) => $action
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Eliminar comprobante')
+                                    ->modalDescription('¿Estás seguro de que deseas eliminar este comprobante? Esta acción no se puede deshacer.')
+                                    ->modalSubmitActionLabel('Sí, eliminar')
+                                    ->modalCancelActionLabel('Cancelar')
+                                    ->action(function (array $arguments, $component, $livewire) {
+                                        // Obtener el UUID del item que se está eliminando
+                                        $statePath = $component->getStatePath();
+                                        $itemKey = $arguments['item'] ?? null;
+                                        
+                                        if ($itemKey !== null) {
+                                            // Obtener el estado actual del repeater
+                                            $items = data_get($livewire, $statePath, []);
+                                            
+                                            // Encontrar el item específico
+                                            if (isset($items[$itemKey]) && isset($items[$itemKey]['id'])) {
+                                                $receiptId = $items[$itemKey]['id'];
+                                                
+                                                // Eliminar directamente de la base de datos
+                                                try {
+                                                    $receipt = \App\Models\ExpenseReceipt::find($receiptId);
+                                                    if ($receipt && $receipt->receipt_type === 'non_deductible') {
+                                                        $receipt->delete();
+                                                        
+                                                        \Filament\Notifications\Notification::make()
+                                                            ->title('Comprobante eliminado')
+                                                            ->body('El comprobante no deducible ha sido eliminado correctamente.')
+                                                            ->success()
+                                                            ->send();
+                                                    }
+                                                } catch (\Exception $e) {
+                                                    \Filament\Notifications\Notification::make()
+                                                        ->title('Error al eliminar')
+                                                        ->body('No se pudo eliminar el comprobante: ' . $e->getMessage())
+                                                        ->danger()
+                                                        ->send();
+                                                    return; // No continuar con la eliminación del UI
+                                                }
+                                            }
+                                            
+                                            // Remover del estado del componente
+                                            unset($items[$itemKey]);
+                                            data_set($livewire, $statePath, array_values($items));
+                                            
+                                            // Forzar actualización del formulario
+                                            $livewire->dispatch('$refresh');
+                                        }
+                                    })
+                            ),
+                    ])
+                    ->hiddenOn('create')
+                    ->collapsible()
+                    ->description('Los comprobantes se guardan usando el botón "Guardar" principal. El indicador de estado muestra si están guardados. El botón eliminar (🗑️) borra inmediatamente.'),
+
+                Forms\Components\Section::make('Comprobantes Fiscales CFDI')
+                    ->icon('heroicon-o-document-text')
+                    ->description('Carga archivos XML de CFDI para extraer automáticamente los datos fiscales y crear comprobantes. Cada concepto se puede categorizar por detalle de gasto.')
+                    ->schema([
+                        // Carga del archivo XML
+                        Forms\Components\FileUpload::make('xml_upload')
+                            ->label('📄 Cargar archivo XML de CFDI')
+                            ->acceptedFileTypes(['application/xml', 'text/xml', '.xml'])
+                            ->directory('temp-xml')
+                            ->helperText('Selecciona el archivo XML del comprobante fiscal CFDI para procesar automáticamente')
+                            ->live()
+                            ->afterStateUpdated(function ($state, $livewire) {
+                                if ($state) {
+                                    // Obtener el record de ExpenseVerification
+                                    $record = $livewire->getRecord();
+                                    if (!$record) {
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Error')
+                                            ->body('Debes guardar la comprobación primero antes de cargar XMLs.')
+                                            ->warning()
+                                            ->send();
+                                        return;
+                                    }
+
+                                    try {
+                                        $xmlContent = null;
+                                        
+                                        // Si es un TemporaryUploadedFile de Livewire
+                                        if (is_object($state) && method_exists($state, 'get')) {
+                                            \Log::info('Processing TemporaryUploadedFile object');
+                                            $xmlContent = $state->get();
+                                        }
+                                        // Si es una cadena de texto (ruta del archivo)
+                                        elseif (is_string($state)) {
+                                            \Log::info('Processing file path string: ' . $state);
+                                            if (file_exists($state)) {
+                                                $xmlContent = file_get_contents($state);
+                                            }
+                                        }
+                                        // Si es un array de archivos
+                                        elseif (is_array($state) && !empty($state)) {
+                                            \Log::info('Processing array of files');
+                                            $firstFile = $state[0];
+                                            if (is_object($firstFile) && method_exists($firstFile, 'get')) {
+                                                $xmlContent = $firstFile->get();
+                                            } elseif (is_string($firstFile) && file_exists($firstFile)) {
+                                                $xmlContent = file_get_contents($firstFile);
+                                            }
+                                        }
+                                        
+                                        if ($xmlContent) {
+                                            \Log::info('XML content loaded successfully, length: ' . strlen($xmlContent));
+                                            static::processXmlAndCreateReceipts($xmlContent, $record, $livewire);
+                                            
+                                            // Forzar la actualización del componente después del procesamiento con delay de 2 segundos
+                                            $livewire->js('setTimeout(() => { window.location.href = "' . $livewire->getResource()::getUrl('edit', ['record' => $record->id]) . '"; }, 2000);');
+                                        } else {
+                                            \Log::error('Failed to load XML content', [
+                                                'state_type' => gettype($state),
+                                                'state_class' => is_object($state) ? get_class($state) : null,
+                                                'state_methods' => is_object($state) ? get_class_methods($state) : null
+                                            ]);
+                                            
+                                            \Filament\Notifications\Notification::make()
+                                                ->title('Error al cargar archivo')
+                                                ->body('No se pudo leer el contenido del archivo XML. Verifica que sea un archivo válido.')
+                                                ->warning()
+                                                ->send();
+                                        }
+                                        
+                                    } catch (\Exception $e) {
+                                        \Log::error('Exception processing XML upload', [
+                                            'error' => $e->getMessage(),
+                                            'trace' => $e->getTraceAsString()
+                                        ]);
+                                        
+                                        \Filament\Notifications\Notification::make()
+                                            ->title('Error al procesar XML')
+                                            ->body('Error: ' . $e->getMessage())
+                                            ->danger()
+                                            ->send();
+                                    }
+                                }
+                            })
+                            ->columnSpanFull(),
+
+                        // Mostrar CFDIs agrupados dinámicamente
+                        static::generateCfdiSections()
+                    ])
+                    ->hiddenOn('create')
+                    ->collapsible(),
+
+                Forms\Components\Section::make('Resumen de Comprobación')
+                    ->schema([
+                        Forms\Components\Placeholder::make('expense_verification_summary')
+                            ->label('')
+                            ->content(function (?ExpenseVerification $record, $livewire) {
+                                if (!$record) {
+                                    return new HtmlString(
+                                        '<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 text-center">
+                                            <p class="text-gray-500 dark:text-gray-400">
+                                                Agrega comprobantes para ver el resumen de comprobación.
+                                            </p>
+                                        </div>'
+                                    );
+                                }
+
+                                // Recargar el registro para obtener datos actualizados
+                                $record->load(['receipts.expenseDetail', 'travelRequest.user.position']);
+                                $summary = $record->getExpenseVerificationSummary();
+
+                                if (count($summary) === 0) {
+                                    return new HtmlString(
+                                        '<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-6 text-center">
+                                            <p class="text-gray-500 dark:text-gray-400">
+                                                No hay información de comprobación disponible.
+                                            </p>
+                                        </div>'
+                                    );
+                                }
+
+                                return new HtmlString(
+                                    view('filament.components.expense-verification-status', [
+                                        'summary' => $summary,
+                                        'message' => null
+                                    ])->render()
+                                );
+                            })
+                            ->columnSpanFull(),
+                    ])
+                    ->hiddenOn('create')
+                    ->collapsible(),
+            ]);
+    }
+
+    protected static function generateCfdiSections()
+    {
+        return Forms\Components\Placeholder::make('cfdi_sections')
+            ->label('')
+            ->content(function ($livewire) {
+                $record = $livewire->getRecord();
+                if (!$record) {
+                    return new HtmlString('<p class="text-gray-500">No hay CFDIs cargados.</p>');
+                }
+
+                // Agrupar comprobantes fiscales por UUID (CFDI)
+                $cfdiGroups = $record->fiscalReceipts()
+                    ->where('receipt_type', 'fiscal')
+                    ->get()
+                    ->groupBy('uuid');
+
+                if ($cfdiGroups->isEmpty()) {
+                    return new HtmlString('<p class="text-gray-500">No hay CFDIs cargados. Carga un archivo XML para ver los comprobantes.</p>');
+                }
+
+                $sectionsHtml = '';
+                
+                foreach ($cfdiGroups as $uuid => $concepts) {
+                    $firstConcept = $concepts->first();
+                    $totalCfdi = $concepts->sum('total_amount');
+                    
+                    // Título de la sección colapsable
+                    $title = "CFDI: {$firstConcept->supplier_name} - {$firstConcept->receipt_date->format('d/m/Y')} - $" . number_format($totalCfdi, 2);
+                    
+                    $sectionsHtml .= static::renderCfdiSection($uuid, $title, $firstConcept, $concepts, $livewire);
+                }
+
+                return new HtmlString($sectionsHtml);
+            })
+            ->columnSpanFull();
+    }
+
+    protected static function renderCfdiSection($uuid, $title, $cfdiData, $concepts, $livewire)
+    {
+        $conceptsHtml = '';
+        
+        foreach ($concepts as $concept) {
+            $statusBadge = '';
+            if ($concept->expense_detail_id) {
+                $statusBadge = '<span id="status-badge-' . $concept->id . '" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success-100 text-success-800 dark:bg-success-900/20 dark:text-success-300">✓ Categorizado</span>';
+            } else {
+                $statusBadge = '<span id="status-badge-' . $concept->id . '" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-warning-100 text-warning-800 dark:bg-warning-900/20 dark:text-warning-300">⏳ Pendiente</span>';
+            }
+            
+            $conceptsHtml .= '
+                <div class="fi-fo-field-wrp relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden mb-4">
+                    <!-- Header compacto del concepto -->
+                    <div class="bg-gray-50 dark:bg-gray-900/50 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1 min-w-0">
+                                <h5 class="font-medium text-gray-900 dark:text-white truncate text-sm">
+                                    ' . e(strlen($concept->concept) > 50 ? substr($concept->concept, 0, 50) . '...' : $concept->concept) . '
+                                </h5>
+                            </div>
+                            <div class="flex items-center gap-3 ml-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300">
+                                    $' . number_format($concept->total_amount, 2) . '
+                                </span>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ' . ($concept->applied_amount > 0 ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300') . '">
+                                    $' . number_format($concept->applied_amount ?? 0, 2) . '
+                                </span>
+                                ' . $statusBadge . '
+                                <button 
+                                    type="button"
+                                    onclick="deleteConcept(' . $concept->id . ')"
+                                    title="Eliminar concepto"
+                                    class="fi-icon-btn relative flex items-center justify-center rounded-lg outline-none transition duration-75 focus-visible:ring-2 -m-2 h-8 w-8 text-gray-400 hover:text-red-500 focus-visible:ring-primary-600 dark:text-gray-500 dark:hover:text-red-400 dark:focus-visible:ring-primary-500"
+                                >
+                                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenido del concepto -->
+                    <div class="p-4 space-y-4">';
+
+            // Mostrar descripción completa si es muy larga
+            if (strlen($concept->concept) > 50) {
+                $conceptsHtml .= '
+                        <div class="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 p-3 rounded-lg">
+                            ' . e($concept->concept) . '
+                        </div>';
+            }
+
+            $conceptsHtml .= '
+                        <!-- Grid de inputs -->
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <!-- Categorización -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Categoría de Gasto
+                                </label>
+                                <select 
+                                    class="fi-select-input block w-full border-gray-300 dark:border-gray-700 rounded-lg focus:ring-primary-600 focus:border-primary-600 dark:bg-gray-800 text-sm"
+                                    onchange="updateConceptField(' . $concept->id . ', \'expense_detail_id\', this.value)"
+                                >
+                                    <option value="">Seleccionar categoría...</option>';
+                                    
+            $expenseDetails = \App\Models\ExpenseDetail::with('concept')->get();
+            foreach ($expenseDetails as $detail) {
+                $selected = $concept->expense_detail_id == $detail->id ? 'selected' : '';
+                $conceptsHtml .= '<option value="' . $detail->id . '" ' . $selected . '>' . e($detail->name . ' (' . $detail->concept->name . ')') . '</option>';
+            }
+            
+            $conceptsHtml .= '
+                                </select>';
+            
+            // Mostrar badges de categoría seleccionada
+            if ($concept->expense_detail_id) {
+                $conceptsHtml .= '
+                                <div class="flex items-center gap-2 mt-2">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/20 dark:text-primary-300">
+                                        ' . e($concept->expenseDetail->name ?? '') . '
+                                    </span>';
+                if ($concept->expenseDetail && $concept->expenseDetail->concept) {
+                    $conceptsHtml .= '
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-info-100 text-info-800 dark:bg-info-900/20 dark:text-info-300">
+                                        ' . e($concept->expenseDetail->concept->name) . '
+                                    </span>';
+                }
+                $conceptsHtml .= '
+                                </div>';
+            }
+            
+            $conceptsHtml .= '
+                            </div>
+                            
+                            <!-- Monto Aplicado -->
+                            <div class="space-y-2">
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Monto Aplicado
+                                </label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <span class="text-gray-500 sm:text-sm">$</span>
+                                    </div>
+                                    <input 
+                                        type="number" 
+                                        step="0.01" 
+                                        min="0" 
+                                        max="' . $concept->total_amount . '"
+                                        value="' . ($concept->applied_amount ?? '') . '" 
+                                        placeholder="0.00"
+                                        class="fi-input block w-full pl-7 text-sm border-gray-300 dark:border-gray-700 rounded-lg focus:ring-primary-600 focus:border-primary-600 dark:bg-gray-800"
+                                        onchange="updateConceptField(' . $concept->id . ', \'applied_amount\', this.value)"
+                                    >
+                                </div>
+                                <div class="text-xs text-gray-500 dark:text-gray-400">
+                                    Máximo: $' . number_format($concept->total_amount, 2) . '
+                                </div>
+                            </div>
+                        </div>
+                    
+                        <!-- Notas -->
+                        <div class="space-y-2">
+                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Notas adicionales
+                            </label>
+                            <textarea 
+                                rows="2" 
+                                placeholder="Agregar notas sobre este concepto..."
+                                class="fi-input block w-full text-sm border-gray-300 dark:border-gray-700 rounded-lg focus:ring-primary-600 focus:border-primary-600 dark:bg-gray-800 resize-none"
+                                onchange="updateConceptField(' . $concept->id . ', \'notes\', this.value)"
+                            >' . e($concept->notes ?? '') . '</textarea>
+                        </div>';
+
+            // Mostrar notas existentes si las hay
+            if ($concept->notes) {
+                $conceptsHtml .= '
+                        <div class="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                            <svg class="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-3.582 8-8 8a8.959 8.959 0 01-4.906-1.456L3 21l2.456-5.094A8.959 8.959 0 013 12c0-4.418 3.582-8 8-8s8 3.582 8 8z"/>
+                            </svg>
+                            <span class="text-sm text-blue-700 dark:text-blue-300">' . e($concept->notes) . '</span>
+                        </div>';
+            }
+            
+            $conceptsHtml .= '
+                    </div>
+                </div>
+                
+                <div class="fi-fo-field-wrp-separator-wrp">
+                    <div class="border-t border-gray-200 dark:border-white/10 my-6"></div>
+                </div>';
+        }
+
+        return '
+        <div class="mb-4 fi-fo-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
+            <details class="group">
+                <summary class="fi-fo-section-header flex cursor-pointer items-center gap-x-3 overflow-hidden px-6 py-4 hover:bg-gray-50 dark:hover:bg-white/5">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-x-3">
+                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500/10">
+                                <svg class="h-5 w-5 text-primary-600 dark:text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="fi-fo-section-header-heading text-base font-semibold leading-6 text-gray-950 dark:text-white">
+                                    ' . e($title) . '
+                                </h3>
+                                <p class="fi-fo-section-header-description text-sm text-gray-500 dark:text-gray-400">
+                                    ' . count($concepts) . ' concepto(s) • UUID: ' . e(substr($cfdiData->uuid, 0, 22)) . '...
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <svg class="h-5 w-5 text-gray-400 transition-transform group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </summary>
+                
+                <div class="fi-fo-section-content border-t border-gray-200 p-6 dark:border-white/10">
+                    <!-- Header con datos del CFDI -->
+                    <div class="fi-fo-field-wrp mb-6">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div class="space-y-2">
+                                <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">Fecha</span>
+                                <div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                                        ' . $cfdiData->receipt_date->format('d/m/Y') . '
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">RFC</span>
+                                <div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 font-mono">
+                                        ' . e($cfdiData->supplier_rfc) . '
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <span class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide font-medium">UUID</span>
+                                <div>
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-300 font-mono" title="' . e($cfdiData->uuid) . '">
+                                        ' . e(substr($cfdiData->uuid, 0, 8)) . '...
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t border-gray-200 dark:border-white/10 pt-6">
+                        <h4 class="text-sm font-medium leading-6 text-gray-950 dark:text-white mb-6">Conceptos del CFDI</h4>
+                        ' . $conceptsHtml . '
+                    </div>
+                </div>
+            </details>
+        </div>
+
+        <script>
+        function updateConceptField(conceptId, field, value) {
+            fetch("/admin/expense-receipts/" + conceptId + "/update-field", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-TOKEN": document.querySelector(\'meta[name="csrf-token"]\').getAttribute("content")
+                },
+                body: JSON.stringify({
+                    field: field,
+                    value: value
+                })
+            })
+            .then(response => {
+                console.log("Response status:", response.status);
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status + ": " + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Response data:", data);
+                if (data.success) {
+                    console.log("Campo actualizado exitosamente");
+                    
+                    // Actualizar el badge de estado dinámicamente sin reload
+                    if (field === "expense_detail_id") {
+                        const badgeElement = document.getElementById("status-badge-" + conceptId);
+                        if (badgeElement) {
+                            if (value && value !== "") {
+                                // Cambiar a estado "Categorizado"
+                                badgeElement.className = "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success-100 text-success-800 dark:bg-success-900/20 dark:text-success-300";
+                                badgeElement.textContent = "✓ Categorizado";
+                            } else {
+                                // Cambiar a estado "Pendiente"
+                                badgeElement.className = "inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-warning-100 text-warning-800 dark:bg-warning-900/20 dark:text-warning-300";
+                                badgeElement.textContent = "⏳ Pendiente";
+                            }
+                            
+                            // Pequeña animación de confirmación
+                            badgeElement.style.transform = "scale(1.1)";
+                            setTimeout(() => {
+                                badgeElement.style.transform = "scale(1)";
+                            }, 200);
+                        }
+                    }
+                    
+                    // Mostrar feedback visual sutil en el campo actualizado
+                    const targetElement = event.target;
+                    if (targetElement) {
+                        targetElement.style.borderColor = "#10b981";
+                        targetElement.style.boxShadow = "0 0 0 1px #10b981";
+                        setTimeout(() => {
+                            targetElement.style.borderColor = "";
+                            targetElement.style.boxShadow = "";
+                        }, 1000);
+                    }
+                } else {
+                    console.error("Error del servidor:", data);
+                    // Solo mostrar error en console, el feedback visual es suficiente
+                    const targetElement = event.target;
+                    if (targetElement) {
+                        targetElement.style.borderColor = "#ef4444";
+                        targetElement.style.boxShadow = "0 0 0 1px #ef4444";
+                        setTimeout(() => {
+                            targetElement.style.borderColor = "";
+                            targetElement.style.boxShadow = "";
+                        }, 2000);
+                    }
+                }
+            })
+            .catch(error => {
+                console.error("Error de red:", error);
+                // Solo mostrar error en console, el feedback visual es suficiente
+                const targetElement = event.target;
+                if (targetElement) {
+                    targetElement.style.borderColor = "#ef4444";
+                    targetElement.style.boxShadow = "0 0 0 1px #ef4444";
+                    setTimeout(() => {
+                        targetElement.style.borderColor = "";
+                        targetElement.style.boxShadow = "";
+                    }, 2000);
+                }
+            });
+        }
+
+        function deleteConcept(conceptId) {
+            if (confirm("¿Estás seguro de que deseas eliminar este concepto del CFDI?")) {
+                fetch("/admin/expense-receipts/" + conceptId + "/delete", {
+                    method: "DELETE",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-CSRF-TOKEN": document.querySelector(\'meta[name="csrf-token"]\').getAttribute("content")
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert("Error al eliminar: " + (data.message || "Error desconocido"));
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                    alert("Error de conexión. No se pudo eliminar el concepto.");
+                });
+            }
+        }
+        </script>';
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('folio')
+                    ->label('Folio')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('bold')
+                    ->color('primary'),
+
+                Tables\Columns\TextColumn::make('travelRequest.folio')
+                    ->label('Solicitud de Viaje')
+                    ->searchable()
+                    ->sortable()
+                    ->url(fn (ExpenseVerification $record) => route('filament.admin.resources.travel-requests.view', $record->travel_request_id)
+                    )
+                    ->color('info'),
+
+                Tables\Columns\TextColumn::make('travelRequest.user.name')
+                    ->label('Solicitante')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('travelRequest.destinationCountry.name')
+                    ->label('Destino')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color(fn (string $state): string => match (true) {
+                        str_contains(strtolower($state), 'méxico') => 'success',
+                        default => 'warning',
+                    }),
+
+                Tables\Columns\TextColumn::make('creator.name')
+                    ->label('Creado por')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('receipts_count')
+                    ->label('Comprobantes')
+                    ->counts('receipts')
+                    ->badge()
+                    ->color('success')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('receipts_total')
+                    ->label('Total Comprobado')
+                    ->getStateUsing(function (ExpenseVerification $record) {
+                        $total = $record->receipts->sum(function ($receipt) {
+                            return $receipt->applied_amount ?? $receipt->total_amount;
+                        });
+                        return $total ? '$' . number_format($total, 2) : '$0.00';
+                    })
+                    ->badge()
+                    ->color('warning'),
+
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Fecha de Creación')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Última Actualización')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('created_by')
+                    ->label('Creado por')
+                    ->options(User::all()->pluck('name', 'id'))
+                    ->searchable(),
+
+                Tables\Filters\Filter::make('created_at')
+                    ->form([
+                        Forms\Components\DatePicker::make('created_from')
+                            ->label('Desde'),
+                        Forms\Components\DatePicker::make('created_until')
+                            ->label('Hasta'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    }),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ])
+            ->defaultSort('created_at', 'desc');
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListExpenseVerifications::route('/'),
+            'create' => Pages\CreateExpenseVerification::route('/create'),
+            'edit' => Pages\EditExpenseVerification::route('/{record}/edit'),
+        ];
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
+    }
+
+    /**
+     * Procesar XML y crear ExpenseReceipts directamente en la base de datos
+     */
+    protected static function processXmlAndCreateReceipts($xmlContent, ExpenseVerification $record, $livewire)
+    {
+        try {
+            if (!$xmlContent || trim($xmlContent) === '') {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El contenido del archivo XML está vacío')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Limpiar BOM y caracteres no válidos
+            $xmlContent = preg_replace('/^[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xmlContent);
+            $xmlContent = str_replace(["\xEF\xBB\xBF", "\xFE\xFF", "\xFF\xFE"], '', $xmlContent);
+            
+            // Verificar que comience con una declaración XML válida
+            if (!preg_match('/^\s*<\?xml/', $xmlContent)) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El archivo no parece ser un XML válido (no comienza con <?xml)')
+                    ->danger()
+                    ->send();
+                return;
+            }
+            
+            // Deshabilitar errores de libxml temporalmente
+            $previous_setting = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            
+            $xml = simplexml_load_string($xmlContent);
+            
+            if ($xml === false) {
+                $errors = libxml_get_errors();
+                $errorMessage = 'El archivo XML no es válido';
+                if (!empty($errors)) {
+                    $errorDetails = [];
+                    foreach ($errors as $error) {
+                        $errorDetails[] = "Línea {$error->line}: {$error->message}";
+                    }
+                    $errorMessage .= ":\n" . implode("\n", $errorDetails);
+                }
+                
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body($errorMessage)
+                    ->danger()
+                    ->send();
+                
+                libxml_use_internal_errors($previous_setting);
+                return;
+            }
+
+            libxml_use_internal_errors($previous_setting);
+
+            // Verificar que sea un CFDI válido
+            $rootName = $xml->getName();
+            if (!in_array($rootName, ['Comprobante', 'cfdi:Comprobante'])) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body("El archivo XML no es un CFDI válido. Elemento raíz encontrado: {$rootName}")
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Registrar namespaces comunes del CFDI
+            $xml->registerXPathNamespace('cfdi', 'http://www.sat.gob.mx/cfd/4');
+            $xml->registerXPathNamespace('cfdi3', 'http://www.sat.gob.mx/cfd/3');
+            $xml->registerXPathNamespace('tfd', 'http://www.sat.gob.mx/TimbreFiscalDigital');
+
+            // Extraer datos con diferentes versiones de CFDI
+            $comprobante = null;
+            $emisor = null;
+            $conceptos = [];
+            $timbreFiscal = null;
+
+            // CFDI 4.0
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // CFDI 3.3 o anteriores
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi3:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi3:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi3:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Si no encuentra con namespaces, intentar sin ellos
+            if (!$comprobante) {
+                $comprobante = $xml;
+                $emisor = $xml->Emisor ?? null;
+                $conceptos = $xml->xpath('//Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Verificar que se encontraron datos básicos
+            if (!$comprobante) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo encontrar el elemento Comprobante en el XML')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Extraer datos de la cabecera del CFDI
+            $nombreEmisor = '';
+            $rfcEmisor = '';
+            
+            if ($emisor) {
+                $nombreEmisor = (string)($emisor['Nombre'] ?? $emisor['nombre'] ?? $emisor->Nombre ?? '');
+                $rfcEmisor = (string)($emisor['Rfc'] ?? $emisor['rfc'] ?? $emisor->Rfc ?? '');
+            }
+            
+            // Si no se encontró con los métodos directos, usar XPath
+            if (!$nombreEmisor || !$rfcEmisor) {
+                $nombreXPath = $xml->xpath('//cfdi:Emisor/@Nombre')[0] ?? $xml->xpath('//cfdi3:Emisor/@Nombre')[0] ?? null;
+                $rfcXPath = $xml->xpath('//cfdi:Emisor/@Rfc')[0] ?? $xml->xpath('//cfdi3:Emisor/@Rfc')[0] ?? null;
+                
+                if ($nombreXPath) $nombreEmisor = (string)$nombreXPath;
+                if ($rfcXPath) $rfcEmisor = (string)$rfcXPath;
+            }
+
+            // Fecha del comprobante
+            $fecha = '';
+            if ($comprobante) {
+                $fecha = (string)($comprobante['Fecha'] ?? $comprobante['fecha'] ?? $comprobante->Fecha ?? '');
+            }
+
+            // UUID del timbre fiscal
+            $uuid = '';
+            if ($timbreFiscal) {
+                $uuid = (string)($timbreFiscal['UUID'] ?? $timbreFiscal['uuid'] ?? $timbreFiscal->UUID ?? '');
+            }
+
+            // Crear ExpenseReceipts para cada concepto
+            $conceptosCreados = 0;
+            $montoTotal = 0;
+            
+            foreach ($conceptos as $concepto) {
+                $descripcion = (string)($concepto['Descripcion'] ?? $concepto['descripcion'] ?? $concepto->Descripcion ?? '');
+                $importe = (string)($concepto['Importe'] ?? $concepto['importe'] ?? $concepto->Importe ?? '0');
+                
+                if ($descripcion && $importe > 0) {
+                    $receiptData = [
+                        'receipt_type' => 'fiscal',
+                        'supplier_name' => $nombreEmisor,
+                        'supplier_rfc' => $rfcEmisor,
+                        'receipt_date' => $fecha ? date('Y-m-d', strtotime($fecha)) : now()->format('Y-m-d'),
+                        'total_amount' => floatval($importe),
+                        'applied_amount' => floatval($importe), // Por defecto aplicar el importe completo
+                        'uuid' => $uuid,
+                        'concept' => $descripcion,
+                        'expense_detail_id' => null, // Usuario debe categorizar
+                        'notes' => null,
+                    ];
+
+                    $receipt = $record->receipts()->create($receiptData);
+                    $conceptosCreados++;
+                    $montoTotal += floatval($importe);
+                }
+            }
+
+            // Guardar también el archivo XML original
+            if ($conceptosCreados > 0) {
+                $fileName = 'CFDI_' . ($uuid ?: uniqid()) . '.xml';
+                $permanentPath = 'expense-receipts/xml/' . $fileName;
+                $permanentFullPath = storage_path('app/public/' . $permanentPath);
+                
+                // Crear directorio si no existe
+                if (!file_exists(dirname($permanentFullPath))) {
+                    mkdir(dirname($permanentFullPath), 0755, true);
+                }
+                
+                file_put_contents($permanentFullPath, $xmlContent);
+                
+                // Actualizar el primer comprobante con la ruta del XML
+                $firstReceipt = $record->receipts()->where('receipt_type', 'fiscal')->where('uuid', $uuid)->first();
+                if ($firstReceipt) {
+                    $firstReceipt->update(['xml_file_path' => $permanentPath]);
+                }
+            }
+
+            \Filament\Notifications\Notification::make()
+                ->title('CFDI cargado exitosamente')
+                ->body("Se crearon {$conceptosCreados} comprobante(s) fiscal(es) del CFDI de {$nombreEmisor} por un total de $" . number_format($montoTotal, 2) . ". Ahora puedes categorizar cada concepto.")
+                ->success()
+                ->duration(8000)
+                ->send();
+
+            // Forzar actualización del formulario y recargar datos
+            $record->refresh();
+            $record->load('fiscalReceipts');
+            $livewire->dispatch('$refresh');
+
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al procesar XML')
+                ->body('Error técnico: ' . $e->getMessage() . ' (Línea: ' . $e->getLine() . ')')
+                ->danger()
+                ->duration(10000)
+                ->send();
+        }
+    }
+
+    /**
+     * Procesar contenido XML de CFDI para el nuevo repeater
+     */
+    protected static function processXmlContentForRepeater($xmlContent, $set, $get)
+    {
+        try {
+            if (!$xmlContent || trim($xmlContent) === '') {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El contenido del archivo XML está vacío')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Limpiar BOM y caracteres no válidos
+            $xmlContent = preg_replace('/^[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xmlContent);
+            $xmlContent = str_replace(["\xEF\xBB\xBF", "\xFE\xFF", "\xFF\xFE"], '', $xmlContent);
+            
+            // Verificar que comience con una declaración XML válida
+            if (!preg_match('/^\s*<\?xml/', $xmlContent)) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El archivo no parece ser un XML válido (no comienza con <?xml)')
+                    ->danger()
+                    ->send();
+                return;
+            }
+            
+            // Deshabilitar errores de libxml temporalmente
+            $previous_setting = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            
+            $xml = simplexml_load_string($xmlContent);
+            
+            if ($xml === false) {
+                $errors = libxml_get_errors();
+                $errorMessage = 'El archivo XML no es válido';
+                if (!empty($errors)) {
+                    $errorDetails = [];
+                    foreach ($errors as $error) {
+                        $errorDetails[] = "Línea {$error->line}: {$error->message}";
+                    }
+                    $errorMessage .= ":\n" . implode("\n", $errorDetails);
+                }
+                
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body($errorMessage)
+                    ->danger()
+                    ->send();
+                
+                libxml_use_internal_errors($previous_setting);
+                return;
+            }
+
+            libxml_use_internal_errors($previous_setting);
+
+            // Verificar que sea un CFDI válido
+            $rootName = $xml->getName();
+            if (!in_array($rootName, ['Comprobante', 'cfdi:Comprobante'])) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body("El archivo XML no es un CFDI válido. Elemento raíz encontrado: {$rootName}")
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Registrar namespaces comunes del CFDI
+            $xml->registerXPathNamespace('cfdi', 'http://www.sat.gob.mx/cfd/4');
+            $xml->registerXPathNamespace('cfdi3', 'http://www.sat.gob.mx/cfd/3');
+            $xml->registerXPathNamespace('tfd', 'http://www.sat.gob.mx/TimbreFiscalDigital');
+
+            // Extraer datos con diferentes versiones de CFDI
+            $comprobante = null;
+            $emisor = null;
+            $conceptos = [];
+            $timbreFiscal = null;
+
+            // CFDI 4.0
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // CFDI 3.3 o anteriores
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi3:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi3:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi3:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Si no encuentra con namespaces, intentar sin ellos
+            if (!$comprobante) {
+                $comprobante = $xml;
+                $emisor = $xml->Emisor ?? null;
+                $conceptos = $xml->xpath('//Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Verificar que se encontraron datos básicos
+            if (!$comprobante) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo encontrar el elemento Comprobante en el XML')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Extraer datos de la cabecera del CFDI
+            $nombreEmisor = '';
+            $rfcEmisor = '';
+            
+            if ($emisor) {
+                $nombreEmisor = (string)($emisor['Nombre'] ?? $emisor['nombre'] ?? $emisor->Nombre ?? '');
+                $rfcEmisor = (string)($emisor['Rfc'] ?? $emisor['rfc'] ?? $emisor->Rfc ?? '');
+            }
+            
+            // Si no se encontró con los métodos directos, usar XPath
+            if (!$nombreEmisor || !$rfcEmisor) {
+                $nombreXPath = $xml->xpath('//cfdi:Emisor/@Nombre')[0] ?? $xml->xpath('//cfdi3:Emisor/@Nombre')[0] ?? null;
+                $rfcXPath = $xml->xpath('//cfdi:Emisor/@Rfc')[0] ?? $xml->xpath('//cfdi3:Emisor/@Rfc')[0] ?? null;
+                
+                if ($nombreXPath) $nombreEmisor = (string)$nombreXPath;
+                if ($rfcXPath) $rfcEmisor = (string)$rfcXPath;
+            }
+            
+            // Establecer datos de cabecera del CFDI
+            $set('cfdi_supplier_name', $nombreEmisor);
+            $set('cfdi_supplier_rfc', $rfcEmisor);
+
+            if ($comprobante) {
+                // Monto total
+                $total = (string)($comprobante['Total'] ?? $comprobante['total'] ?? $comprobante->Total ?? '0');
+                $set('cfdi_total', floatval($total));
+
+                // Fecha del comprobante
+                $fecha = (string)($comprobante['Fecha'] ?? $comprobante['fecha'] ?? $comprobante->Fecha ?? '');
+                if ($fecha) {
+                    try {
+                        $set('cfdi_date', date('d/m/Y', strtotime($fecha)));
+                    } catch (\Exception $e) {
+                        $set('cfdi_date', $fecha);
+                    }
+                }
+            }
+
+            // UUID del timbre fiscal
+            if ($timbreFiscal) {
+                $uuid = (string)($timbreFiscal['UUID'] ?? $timbreFiscal['uuid'] ?? $timbreFiscal->UUID ?? '');
+                $set('cfdi_uuid', $uuid);
+            }
+
+            // Procesar conceptos
+            $conceptosArray = [];
+            foreach ($conceptos as $concepto) {
+                $descripcion = (string)($concepto['Descripcion'] ?? $concepto['descripcion'] ?? $concepto->Descripcion ?? '');
+                $importe = (string)($concepto['Importe'] ?? $concepto['importe'] ?? $concepto->Importe ?? '0');
+                
+                if ($descripcion) {
+                    $conceptosArray[] = [
+                        'concept' => $descripcion,
+                        'total_amount' => floatval($importe),
+                        'applied_amount' => floatval($importe), // Por defecto aplicar el importe completo
+                        'expense_detail_id' => null,
+                        'notes' => '',
+                        // Datos heredados del CFDI
+                        'supplier_name' => $nombreEmisor,
+                        'supplier_rfc' => $rfcEmisor,
+                        'receipt_date' => $fecha ? date('Y-m-d', strtotime($fecha)) : now()->format('Y-m-d'),
+                        'uuid' => $uuid ?? '',
+                        'receipt_type' => 'fiscal',
+                    ];
+                }
+            }
+
+            $set('cfdi_concepts', $conceptosArray);
+            
+            // Guardar el contenido del XML para usarlo después
+            $set('xml_content', base64_encode($xmlContent));
+
+            \Filament\Notifications\Notification::make()
+                ->title('CFDI procesado exitosamente')
+                ->body('Se han extraído ' . count($conceptosArray) . ' concepto(s) del CFDI. Categoriza cada concepto según el detalle de gasto correspondiente.')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al procesar XML')
+                ->body('Error técnico: ' . $e->getMessage() . ' (Línea: ' . $e->getLine() . ')')
+                ->danger()
+                ->duration(10000)
+                ->send();
+        }
+    }
+
+    /**
+     * Procesar contenido XML de CFDI directamente
+     */
+    protected static function processXmlContent($xmlContent, $set, $get)
+    {
+        try {
+            if (!$xmlContent || trim($xmlContent) === '') {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El contenido del archivo XML está vacío')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Mostrar información de debug (primeros 200 caracteres)
+            $preview = substr(trim($xmlContent), 0, 200);
+            \Filament\Notifications\Notification::make()
+                ->title('Procesando XML')
+                ->body('Procesando contenido XML... Contenido: ' . $preview . '...')
+                ->info()
+                ->duration(3000)
+                ->send();
+            
+            // Limpiar BOM y caracteres no válidos
+            $xmlContent = preg_replace('/^[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xmlContent);
+            $xmlContent = str_replace(["\xEF\xBB\xBF", "\xFE\xFF", "\xFF\xFE"], '', $xmlContent);
+            
+            // Verificar que comience con una declaración XML válida
+            if (!preg_match('/^\s*<\?xml/', $xmlContent)) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El archivo no parece ser un XML válido (no comienza con <?xml)')
+                    ->danger()
+                    ->send();
+                return;
+            }
+            
+            // Deshabilitar errores de libxml temporalmente
+            $previous_setting = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            
+            $xml = simplexml_load_string($xmlContent);
+            
+            if ($xml === false) {
+                $errors = libxml_get_errors();
+                $errorMessage = 'El archivo XML no es válido';
+                if (!empty($errors)) {
+                    $errorDetails = [];
+                    foreach ($errors as $error) {
+                        $errorDetails[] = "Línea {$error->line}: {$error->message}";
+                    }
+                    $errorMessage .= ":\n" . implode("\n", $errorDetails);
+                }
+                
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body($errorMessage)
+                    ->danger()
+                    ->duration(10000)
+                    ->send();
+                
+                // Restaurar configuración de libxml
+                libxml_use_internal_errors($previous_setting);
+                return;
+            }
+
+            // Restaurar configuración de libxml
+            libxml_use_internal_errors($previous_setting);
+
+            // Verificar que sea un CFDI válido
+            $rootName = $xml->getName();
+            if (!in_array($rootName, ['Comprobante', 'cfdi:Comprobante'])) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body("El archivo XML no es un CFDI válido. Elemento raíz encontrado: {$rootName}")
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Detectar y registrar namespaces automáticamente
+            $namespaces = $xml->getNamespaces(true);
+            
+            // Registrar namespaces comunes del CFDI
+            $xml->registerXPathNamespace('cfdi', 'http://www.sat.gob.mx/cfd/4');
+            $xml->registerXPathNamespace('cfdi3', 'http://www.sat.gob.mx/cfd/3');
+            $xml->registerXPathNamespace('tfd', 'http://www.sat.gob.mx/TimbreFiscalDigital');
+
+            // Intentar extraer datos con diferentes versiones de CFDI
+            $comprobante = null;
+            $emisor = null;
+            $conceptos = [];
+            $timbreFiscal = null;
+
+            // CFDI 4.0
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // CFDI 3.3 o anteriores
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi3:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi3:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi3:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Si no encuentra con namespaces, intentar sin ellos
+            if (!$comprobante) {
+                $comprobante = $xml;
+                $emisor = $xml->Emisor ?? null;
+                $conceptos = $xml->xpath('//Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Verificar que se encontraron datos básicos
+            if (!$comprobante) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo encontrar el elemento Comprobante en el XML')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Extraer datos de la cabecera - improved with XPath fallback
+            $nombreEmisor = '';
+            $rfcEmisor = '';
+            
+            if ($emisor) {
+                $nombreEmisor = (string)($emisor['Nombre'] ?? $emisor['nombre'] ?? $emisor->Nombre ?? '');
+                $rfcEmisor = (string)($emisor['Rfc'] ?? $emisor['rfc'] ?? $emisor->Rfc ?? '');
+            }
+            
+            // Si no se encontró con los métodos directos, usar XPath (para CFDIs con namespaces)
+            if (!$nombreEmisor || !$rfcEmisor) {
+                $nombreXPath = $xml->xpath('//cfdi:Emisor/@Nombre')[0] ?? $xml->xpath('//cfdi3:Emisor/@Nombre')[0] ?? null;
+                $rfcXPath = $xml->xpath('//cfdi:Emisor/@Rfc')[0] ?? $xml->xpath('//cfdi3:Emisor/@Rfc')[0] ?? null;
+                
+                if ($nombreXPath) $nombreEmisor = (string)$nombreXPath;
+                if ($rfcXPath) $rfcEmisor = (string)$rfcXPath;
+            }
+            
+            $set('cfdi_supplier_name', $nombreEmisor);
+            $set('cfdi_supplier_rfc', $rfcEmisor);
+
+            if ($comprobante) {
+                // Monto total
+                $total = (string)($comprobante['Total'] ?? $comprobante['total'] ?? $comprobante->Total ?? '0');
+                $set('cfdi_total', floatval($total));
+
+                // Fecha del comprobante
+                $fecha = (string)($comprobante['Fecha'] ?? $comprobante['fecha'] ?? $comprobante->Fecha ?? '');
+                if ($fecha) {
+                    try {
+                        $set('cfdi_date', date('d/m/Y', strtotime($fecha)));
+                    } catch (\Exception $e) {
+                        $set('cfdi_date', $fecha);
+                    }
+                }
+            }
+
+            // UUID del timbre fiscal
+            if ($timbreFiscal) {
+                $uuid = (string)($timbreFiscal['UUID'] ?? $timbreFiscal['uuid'] ?? $timbreFiscal->UUID ?? '');
+                $set('cfdi_uuid', $uuid);
+            }
+
+            // Procesar conceptos
+            $conceptosArray = [];
+            foreach ($conceptos as $concepto) {
+                $descripcion = (string)($concepto['Descripcion'] ?? $concepto['descripcion'] ?? $concepto->Descripcion ?? '');
+                $importe = (string)($concepto['Importe'] ?? $concepto['importe'] ?? $concepto->Importe ?? '0');
+                $cantidad = (string)($concepto['Cantidad'] ?? $concepto['cantidad'] ?? $concepto->Cantidad ?? '1');
+                $valorUnitario = (string)($concepto['ValorUnitario'] ?? $concepto['valorUnitario'] ?? $concepto->ValorUnitario ?? '0');
+                
+                if ($descripcion) {
+                    $conceptosArray[] = [
+                        'description' => $descripcion,
+                        'amount' => floatval($importe),
+                        'quantity' => floatval($cantidad),
+                        'unit_value' => floatval($valorUnitario),
+                        'expense_detail_id' => null,
+                        'applied_amount' => floatval($importe), // Por defecto aplicar el importe completo
+                        'notes' => '',
+                    ];
+                }
+            }
+
+            $set('cfdi_concepts', $conceptosArray);
+            
+            // Guardar el contenido del XML para usarlo después
+            $set('xml_content', base64_encode($xmlContent));
+
+            \Filament\Notifications\Notification::make()
+                ->title('CFDI procesado exitosamente')
+                ->body('Se han extraído ' . count($conceptosArray) . ' concepto(s) del CFDI. Categoriza cada concepto según el detalle de gasto correspondiente.')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al procesar XML')
+                ->body('Error técnico: ' . $e->getMessage() . ' (Línea: ' . $e->getLine() . ')')
+                ->danger()
+                ->duration(10000)
+                ->send();
+        }
+    }
+
+    /**
+     * Procesar archivo XML de CFDI para extraer datos fiscales en el modal
+     */
+    protected static function processXmlForModal($xmlPath, $set, $get)
+    {
+        try {
+            // Buscar el archivo en las ubicaciones posibles
+            $possiblePaths = [
+                storage_path('app/public/' . $xmlPath),
+                storage_path('app/' . $xmlPath),
+                public_path('storage/' . $xmlPath),
+                $xmlPath, // Ruta absoluta directa
+            ];
+
+            $fullPath = null;
+            foreach ($possiblePaths as $path) {
+                if (file_exists($path)) {
+                    $fullPath = $path;
+                    break;
+                }
+            }
+
+            if (!$fullPath) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo encontrar el archivo XML. Rutas verificadas: ' . implode(', ', $possiblePaths))
+                    ->danger()
+                    ->duration(10000)
+                    ->send();
+                return;
+            }
+
+            // Cargar y procesar el XML
+            $xmlContent = file_get_contents($fullPath);
+            
+            if (!$xmlContent) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo leer el contenido del archivo XML desde: ' . $fullPath)
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Verificar que el contenido no esté vacío
+            if (trim($xmlContent) === '') {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El archivo XML está vacío')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Mostrar información de debug (primeros 200 caracteres)
+            $preview = substr(trim($xmlContent), 0, 200);
+            \Filament\Notifications\Notification::make()
+                ->title('Procesando XML')
+                ->body('Archivo encontrado en: ' . $fullPath . '. Contenido: ' . $preview . '...')
+                ->info()
+                ->duration(3000)
+                ->send();
+            
+            // Limpiar BOM y caracteres no válidos
+            $xmlContent = preg_replace('/^[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xmlContent);
+            $xmlContent = str_replace(["\xEF\xBB\xBF", "\xFE\xFF", "\xFF\xFE"], '', $xmlContent);
+            
+            // Verificar que comience con una declaración XML válida
+            if (!preg_match('/^\s*<\?xml/', $xmlContent)) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('El archivo no parece ser un XML válido (no comienza con <?xml)')
+                    ->danger()
+                    ->send();
+                return;
+            }
+            
+            // Deshabilitar errores de libxml temporalmente
+            $previous_setting = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            
+            $xml = simplexml_load_string($xmlContent);
+            
+            if ($xml === false) {
+                $errors = libxml_get_errors();
+                $errorMessage = 'El archivo XML no es válido';
+                if (!empty($errors)) {
+                    $errorDetails = [];
+                    foreach ($errors as $error) {
+                        $errorDetails[] = "Línea {$error->line}: {$error->message}";
+                    }
+                    $errorMessage .= ":\n" . implode("\n", $errorDetails);
+                }
+                
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body($errorMessage)
+                    ->danger()
+                    ->duration(10000)
+                    ->send();
+                
+                // Restaurar configuración de libxml
+                libxml_use_internal_errors($previous_setting);
+                return;
+            }
+
+            // Restaurar configuración de libxml
+            libxml_use_internal_errors($previous_setting);
+
+            // Verificar que sea un CFDI válido
+            $rootName = $xml->getName();
+            if (!in_array($rootName, ['Comprobante', 'cfdi:Comprobante'])) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body("El archivo XML no es un CFDI válido. Elemento raíz encontrado: {$rootName}")
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Detectar y registrar namespaces automáticamente
+            $namespaces = $xml->getNamespaces(true);
+            
+            // Registrar namespaces comunes del CFDI
+            $xml->registerXPathNamespace('cfdi', 'http://www.sat.gob.mx/cfd/4');
+            $xml->registerXPathNamespace('cfdi3', 'http://www.sat.gob.mx/cfd/3');
+            $xml->registerXPathNamespace('tfd', 'http://www.sat.gob.mx/TimbreFiscalDigital');
+
+            // Intentar extraer datos con diferentes versiones de CFDI
+            $comprobante = null;
+            $emisor = null;
+            $conceptos = [];
+            $timbreFiscal = null;
+
+            // CFDI 4.0
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // CFDI 3.3 o anteriores
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi3:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi3:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi3:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Si no encuentra con namespaces, intentar sin ellos
+            if (!$comprobante) {
+                $comprobante = $xml;
+                $emisor = $xml->Emisor ?? null;
+                $conceptos = $xml->xpath('//Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Verificar que se encontraron datos básicos
+            if (!$comprobante) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo encontrar el elemento Comprobante en el XML')
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Extraer datos de la cabecera
+            if ($emisor) {
+                $nombreEmisor = (string)($emisor['Nombre'] ?? $emisor['nombre'] ?? $emisor->Nombre ?? '');
+                $rfcEmisor = (string)($emisor['Rfc'] ?? $emisor['rfc'] ?? $emisor->Rfc ?? '');
+                
+                $set('cfdi_supplier_name', $nombreEmisor);
+                $set('cfdi_supplier_rfc', $rfcEmisor);
+            }
+
+            if ($comprobante) {
+                // Monto total
+                $total = (string)($comprobante['Total'] ?? $comprobante['total'] ?? $comprobante->Total ?? '0');
+                $set('cfdi_total', floatval($total));
+
+                // Fecha del comprobante
+                $fecha = (string)($comprobante['Fecha'] ?? $comprobante['fecha'] ?? $comprobante->Fecha ?? '');
+                if ($fecha) {
+                    try {
+                        $set('cfdi_date', date('d/m/Y', strtotime($fecha)));
+                    } catch (\Exception $e) {
+                        $set('cfdi_date', $fecha);
+                    }
+                }
+            }
+
+            // UUID del timbre fiscal
+            if ($timbreFiscal) {
+                $uuid = (string)($timbreFiscal['UUID'] ?? $timbreFiscal['uuid'] ?? $timbreFiscal->UUID ?? '');
+                $set('cfdi_uuid', $uuid);
+            }
+
+            // Procesar conceptos
+            $conceptosArray = [];
+            foreach ($conceptos as $concepto) {
+                $descripcion = (string)($concepto['Descripcion'] ?? $concepto['descripcion'] ?? $concepto->Descripcion ?? '');
+                $importe = (string)($concepto['Importe'] ?? $concepto['importe'] ?? $concepto->Importe ?? '0');
+                $cantidad = (string)($concepto['Cantidad'] ?? $concepto['cantidad'] ?? $concepto->Cantidad ?? '1');
+                $valorUnitario = (string)($concepto['ValorUnitario'] ?? $concepto['valorUnitario'] ?? $concepto->ValorUnitario ?? '0');
+                
+                if ($descripcion) {
+                    $conceptosArray[] = [
+                        'description' => $descripcion,
+                        'amount' => floatval($importe),
+                        'quantity' => floatval($cantidad),
+                        'unit_value' => floatval($valorUnitario),
+                        'expense_detail_id' => null,
+                        'applied_amount' => floatval($importe), // Por defecto aplicar el importe completo
+                        'notes' => '',
+                    ];
+                }
+            }
+
+            $set('cfdi_concepts', $conceptosArray);
+            
+            // Guardar el contenido del XML para usarlo después
+            $set('xml_content', base64_encode($xmlContent));
+
+            \Filament\Notifications\Notification::make()
+                ->title('CFDI procesado exitosamente')
+                ->body('Se han extraído ' . count($conceptosArray) . ' concepto(s) del CFDI. Categoriza cada concepto según el detalle de gasto correspondiente.')
+                ->success()
+                ->duration(5000)
+                ->send();
+
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al procesar XML')
+                ->body('Error técnico: ' . $e->getMessage() . ' (Línea: ' . $e->getLine() . ')')
+                ->danger()
+                ->duration(10000)
+                ->send();
+        }
+    }
+
+    /**
+     * Guardar conceptos del CFDI como comprobantes fiscales
+     */
+    protected static function saveCfdiConcepts(array $data, ExpenseVerification $record)
+    {
+        try {
+            $conceptosProcesados = 0;
+            $montoTotal = 0;
+            
+            // Extraer datos principales del CFDI (usar campos hidden como fallback)
+            $supplierName = $data['cfdi_supplier_name'] ?? $data['cfdi_supplier_name_hidden'] ?? 'Proveedor no especificado';
+            $supplierRfc = $data['cfdi_supplier_rfc'] ?? $data['cfdi_supplier_rfc_hidden'] ?? null;
+            $cfdiUuid = $data['cfdi_uuid'] ?? $data['cfdi_uuid_hidden'] ?? null;
+            $cfdiTotal = $data['cfdi_total'] ?? $data['cfdi_total_hidden'] ?? null;
+            $cfdiDate = $data['cfdi_date'] ?? $data['cfdi_date_hidden'] ?? null;
+            
+            // Manejar la fecha del CFDI
+            $receiptDate = now()->format('Y-m-d'); // Fecha por defecto
+            if (!empty($data['cfdi_date'])) {
+                try {
+                    // La fecha viene en formato d/m/Y desde el procesamiento del XML
+                    $receiptDate = \Carbon\Carbon::createFromFormat('d/m/Y', $data['cfdi_date'])->format('Y-m-d');
+                } catch (\Exception $e) {
+                    // Si falla el parsing, intentar otros formatos o usar fecha actual
+                    try {
+                        $receiptDate = \Carbon\Carbon::parse($data['cfdi_date'])->format('Y-m-d');
+                    } catch (\Exception $e2) {
+                        $receiptDate = now()->format('Y-m-d');
+                    }
+                }
+            }
+            
+            foreach ($data['cfdi_concepts'] as $concepto) {
+                // Solo procesar conceptos que tengan categoría asignada
+                if (empty($concepto['expense_detail_id'])) {
+                    continue;
+                }
+                
+                // Validar que tenga los campos requeridos - flexible para diferentes estructuras
+                $amount = $concepto['amount'] ?? $concepto['total_amount'] ?? $concepto['importe'] ?? 0;
+                $appliedAmount = $concepto['applied_amount'] ?? $concepto['monto_aplicado'] ?? $amount;
+                $conceptDescription = $concepto['description'] ?? $concepto['descripcion'] ?? $concepto['concept'] ?? 'Concepto no especificado';
+                
+                // Crear el comprobante fiscal con los datos correctos del CFDI
+                $receipt = $record->receipts()->create([
+                    'receipt_type' => 'fiscal',
+                    'supplier_name' => $supplierName,
+                    'supplier_rfc' => $supplierRfc,
+                    'receipt_date' => $receiptDate,
+                    'total_amount' => $amount,
+                    'applied_amount' => $appliedAmount,
+                    'uuid' => $cfdiUuid,
+                    'concept' => $conceptDescription,
+                    'expense_detail_id' => $concepto['expense_detail_id'],
+                    'notes' => $concepto['notes'] ?? null,
+                ]);
+                
+                $conceptosProcesados++;
+                $montoTotal += $appliedAmount;
+            }
+            
+            // Guardar también el archivo XML original si se proporcionó el contenido
+            if (!empty($data['xml_content']) && $conceptosProcesados > 0) {
+                $xmlContent = base64_decode($data['xml_content']);
+                if ($xmlContent) {
+                    $fileName = 'CFDI_' . ($data['cfdi_uuid'] ?? uniqid()) . '.xml';
+                    $permanentPath = 'expense-receipts/xml/' . $fileName;
+                    $permanentFullPath = storage_path('app/public/' . $permanentPath);
+                    
+                    // Crear directorio si no existe
+                    if (!file_exists(dirname($permanentFullPath))) {
+                        mkdir(dirname($permanentFullPath), 0755, true);
+                    }
+                    
+                    file_put_contents($permanentFullPath, $xmlContent);
+                    
+                    // Actualizar el primer comprobante con la ruta del XML
+                    $firstReceipt = $record->receipts()->where('receipt_type', 'fiscal')->orderBy('id', 'desc')->first();
+                    if ($firstReceipt) {
+                        $firstReceipt->update(['xml_file_path' => $permanentPath]);
+                    }
+                }
+            }
+            
+            \Filament\Notifications\Notification::make()
+                ->title('CFDI guardado exitosamente')
+                ->body("Se procesó 1 comprobante fiscal CFDI con {$conceptosProcesados} concepto(s) categorizado(s) por un total de $" . number_format($montoTotal, 2))
+                ->success()
+                ->duration(8000)
+                ->send();
+
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al guardar CFDI')
+                ->body('Error técnico: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    /**
+     * Eliminar un concepto de CFDI específico
+     */
+    public static function deleteReceipt($receiptId)
+    {
+        \Log::info('Método deleteReceipt llamado', [
+            'receipt_id' => $receiptId,
+            'user_id' => auth()->id(),
+            'timestamp' => now()
+        ]);
+
+        try {
+            $receipt = \App\Models\ExpenseReceipt::findOrFail($receiptId);
+            
+            \Log::info('Receipt encontrado', [
+                'receipt_id' => $receiptId,
+                'supplier_name' => $receipt->supplier_name,
+                'total_amount' => $receipt->total_amount,
+                'receipt_type' => $receipt->receipt_type
+            ]);
+            
+            // Obtener la verificación de gastos para recalcular después
+            $expenseVerification = $receipt->expenseVerification;
+            
+            // Verificar que es un receipt válido para eliminación (fiscal o no deducible)
+            if (!in_array($receipt->receipt_type, ['fiscal', 'non_deductible'])) {
+                \Log::warning('Intento de eliminar receipt de tipo no permitido', [
+                    'receipt_id' => $receiptId,
+                    'receipt_type' => $receipt->receipt_type
+                ]);
+                
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Solo se pueden eliminar comprobantes fiscales o no deducibles'
+                ], 400);
+            }
+            
+            // Eliminar el receipt
+            $receipt->delete();
+            
+            \Log::info('Receipt eliminado exitosamente', [
+                'receipt_id' => $receiptId
+            ]);
+            
+            // Refrescar el modelo para obtener datos actualizados
+            $expenseVerification->refresh();
+            
+            // Logging de la eliminación exitosa
+            \Log::info('Concepto CFDI eliminado correctamente', [
+                'receipt_id' => $receiptId,
+                'expense_verification_id' => $expenseVerification->id,
+                'user_id' => auth()->id()
+            ]);
+            
+            $summary = $expenseVerification->getExpenseVerificationSummary();
+            
+            \Log::info('Resumen recalculado', [
+                'summary_count' => count($summary),
+                'summary' => $summary
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Concepto eliminado correctamente',
+                'summary' => $summary
+            ]);
+            
+        } catch (\Exception $e) {
+            // Logging detallado del error
+            \Log::error('Error al eliminar concepto CFDI: ' . $e->getMessage(), [
+                'receipt_id' => $receiptId,
+                'user_id' => auth()->id(),
+                'error' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al eliminar el concepto: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Procesar archivo XML de CFDI para extraer datos fiscales (método original mantenido por compatibilidad)
+     */
+    protected static function processXmlFile($xmlPath, $set, $get)
+    {
+        try {
+            // Verificar si es un archivo temporal (durante la subida)
+            $fullPath = null;
+            
+            if (is_string($xmlPath) && file_exists($xmlPath)) {
+                // Es una ruta temporal directa
+                $fullPath = $xmlPath;
+            } else {
+                // Verificar diferentes rutas posibles del archivo almacenado
+                $possiblePaths = [
+                    storage_path('app/public/' . $xmlPath),
+                    storage_path('app/' . $xmlPath),
+                    public_path('storage/' . $xmlPath),
+                ];
+
+                foreach ($possiblePaths as $path) {
+                    if (file_exists($path)) {
+                        $fullPath = $path;
+                        break;
+                    }
+                }
+            }
+
+            if (!$fullPath) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo encontrar el archivo XML. Ruta: ' . $xmlPath)
+                    ->danger()
+                    ->send();
+                return;
+            }
+
+            // Cargar y procesar el XML
+            $xmlContent = file_get_contents($fullPath);
+            
+            if (!$xmlContent) {
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body('No se pudo leer el contenido del archivo XML')
+                    ->danger()
+                    ->send();
+                return;
+            }
+            
+            // Limpiar BOM y caracteres no válidos
+            $xmlContent = preg_replace('/^[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/', '', $xmlContent);
+            $xmlContent = str_replace(["\xEF\xBB\xBF", "\xFE\xFF", "\xFF\xFE"], '', $xmlContent);
+            
+            // Deshabilitar errores de libxml temporalmente
+            $previous_setting = libxml_use_internal_errors(true);
+            libxml_clear_errors();
+            
+            $xml = simplexml_load_string($xmlContent);
+            
+            if ($xml === false) {
+                $errors = libxml_get_errors();
+                $errorMessage = 'El archivo XML no es válido';
+                if (!empty($errors)) {
+                    $errorMessage .= ': ' . $errors[0]->message;
+                }
+                
+                \Filament\Notifications\Notification::make()
+                    ->title('Error al procesar XML')
+                    ->body($errorMessage)
+                    ->danger()
+                    ->send();
+                
+                // Restaurar configuración de libxml
+                libxml_use_internal_errors($previous_setting);
+                return;
+            }
+
+            // Restaurar configuración de libxml
+            libxml_use_internal_errors($previous_setting);
+
+            // Detectar y registrar namespaces automáticamente
+            $namespaces = $xml->getNamespaces(true);
+            
+            // Registrar namespaces comunes del CFDI
+            $xml->registerXPathNamespace('cfdi', 'http://www.sat.gob.mx/cfd/4');
+            $xml->registerXPathNamespace('cfdi3', 'http://www.sat.gob.mx/cfd/3');
+            $xml->registerXPathNamespace('tfd', 'http://www.sat.gob.mx/TimbreFiscalDigital');
+
+            // Intentar extraer datos con diferentes versiones de CFDI
+            $comprobante = null;
+            $emisor = null;
+            $conceptos = [];
+            $timbreFiscal = null;
+
+            // CFDI 4.0
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // CFDI 3.3 o anteriores
+            if (!$comprobante) {
+                $comprobante = $xml->xpath('//cfdi3:Comprobante')[0] ?? null;
+                $emisor = $xml->xpath('//cfdi3:Emisor')[0] ?? null;
+                $conceptos = $xml->xpath('//cfdi3:Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//tfd:TimbreFiscalDigital')[0] ?? null;
+            }
+
+            // Si no encuentra con namespaces, intentar sin ellos
+            if (!$comprobante) {
+                $comprobante = $xml;
+                $emisor = $xml->Emisor ?? null;
+                $conceptos = $xml->xpath('//Concepto') ?? [];
+                $timbreFiscal = $xml->xpath('//TimbreFiscalDigital')[0] ?? null;
+            }
+
+            $extractedData = [];
+
+            // Prellenar campos con datos extraídos
+            if ($emisor) {
+                $nombreEmisor = (string)($emisor['Nombre'] ?? $emisor['nombre'] ?? $emisor->Nombre ?? '');
+                $rfcEmisor = (string)($emisor['Rfc'] ?? $emisor['rfc'] ?? $emisor->Rfc ?? '');
+                
+                if ($nombreEmisor) {
+                    $set('supplier_name', $nombreEmisor);
+                    $extractedData['Proveedor'] = $nombreEmisor;
+                }
+                
+                if ($rfcEmisor) {
+                    $set('supplier_rfc', $rfcEmisor);
+                    $extractedData['RFC'] = $rfcEmisor;
+                }
+            }
+
+            if ($comprobante) {
+                // Monto total
+                $total = (string)($comprobante['Total'] ?? $comprobante['total'] ?? $comprobante->Total ?? '0');
+                if ($total && $total !== '0') {
+                    $set('total_amount', floatval($total));
+                    $extractedData['Monto Total'] = '$' . number_format(floatval($total), 2);
+                }
+
+                // Fecha del comprobante
+                $fecha = (string)($comprobante['Fecha'] ?? $comprobante['fecha'] ?? $comprobante->Fecha ?? '');
+                if ($fecha) {
+                    try {
+                        $fechaFormateada = date('Y-m-d', strtotime($fecha));
+                        $set('receipt_date', $fechaFormateada);
+                        $extractedData['Fecha'] = date('d/m/Y', strtotime($fecha));
+                    } catch (\Exception $e) {
+                        // Ignorar errores de fecha
+                    }
+                }
+            }
+
+            // UUID del timbre fiscal
+            if ($timbreFiscal) {
+                $uuid = (string)($timbreFiscal['UUID'] ?? $timbreFiscal['uuid'] ?? $timbreFiscal->UUID ?? '');
+                if ($uuid) {
+                    $set('uuid', $uuid);
+                    $extractedData['UUID'] = $uuid;
+                }
+            }
+
+            // Concatenar conceptos
+            $conceptosTexto = [];
+            foreach ($conceptos as $concepto) {
+                $descripcion = (string)($concepto['Descripcion'] ?? $concepto['descripcion'] ?? $concepto->Descripcion ?? '');
+                if ($descripcion) {
+                    $conceptosTexto[] = $descripcion;
+                }
+            }
+            if (!empty($conceptosTexto)) {
+                $conceptosFinal = implode(' | ', $conceptosTexto);
+                $set('concept', $conceptosFinal);
+                $extractedData['Conceptos'] = $conceptosFinal;
+            }
+
+            // Crear mensaje de éxito con datos extraídos
+            $mensaje = 'Datos extraídos del CFDI:';
+            foreach ($extractedData as $campo => $valor) {
+                $mensaje .= "\n• {$campo}: {$valor}";
+            }
+
+            if (empty($extractedData)) {
+                $mensaje = 'El XML se procesó correctamente pero no se encontraron datos válidos del CFDI. Verifica que sea un archivo XML de comprobante fiscal válido.';
+            }
+
+            \Filament\Notifications\Notification::make()
+                ->title('XML procesado exitosamente')
+                ->body($mensaje)
+                ->success()
+                ->duration(10000) // 10 segundos para leer los datos
+                ->send();
+
+        } catch (\Exception $e) {
+            \Filament\Notifications\Notification::make()
+                ->title('Error al procesar XML')
+                ->body('Error técnico: ' . $e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public static function updateReceiptField($receiptId, $request)
+    {
+        try {
+            $receipt = \App\Models\ExpenseReceipt::findOrFail($receiptId);
+            
+            $field = $request->input('field');
+            $value = $request->input('value');
+            
+            // Validar que el campo sea permitido
+            $allowedFields = ['applied_amount', 'expense_detail_id', 'notes'];
+            if (!in_array($field, $allowedFields)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Campo no permitido: ' . $field
+                ], 400);
+            }
+            
+            // Validar el valor según el campo
+            if ($field === 'expense_detail_id' && !empty($value)) {
+                $expenseDetail = \App\Models\ExpenseDetail::find($value);
+                if (!$expenseDetail) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Categoría de gasto no válida'
+                    ], 400);
+                }
+            }
+            
+            if ($field === 'applied_amount' && !empty($value)) {
+                if (!is_numeric($value) || $value < 0) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'El monto aplicado debe ser un número positivo'
+                    ], 400);
+                }
+            }
+            
+            // Actualizar el campo
+            $updateData = [$field => $value ?: null];
+            
+            // Para gastos no deducibles, si se actualiza applied_amount, también actualizar total_amount
+            if ($field === 'applied_amount' && $receipt->receipt_type === 'non_deductible') {
+                $updateData['total_amount'] = $value ?: null;
+                \Log::info("Non-deductible receipt: updating both applied_amount and total_amount", [
+                    'receipt_id' => $receiptId,
+                    'amount' => $value
+                ]);
+            }
+            
+            $receipt->update($updateData);
+            
+            \Log::info("Receipt field updated", [
+                'receipt_id' => $receiptId,
+                'field' => $field,
+                'value' => $value,
+                'updated_by' => auth()->id()
+            ]);
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Campo actualizado correctamente',
+                'data' => [
+                    'receipt_id' => $receiptId,
+                    'field' => $field,
+                    'value' => $value
+                ]
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error("Error updating receipt field", [
+                'receipt_id' => $receiptId,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Error interno del servidor: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+}

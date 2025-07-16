@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<cfdi:Comprobante xmlns:cfdi="http://www.sat.gob.mx/cfd/4" Version="4.0" Fecha="2024-01-15T10:30:00" Total="2850.00" SubTotal="2500.00" Moneda="MXN">
+    <cfdi:Emisor Rfc="AAA010101AAA" Nombre="Hotel y Servicios Empresariales S.A. de C.V." RegimenFiscal="601"/>
+    <cfdi:Receptor Rfc="BBB020202BBB" Nombre="Cliente de Prueba" UsoCFDI="G03"/>
+    <cfdi:Conceptos>
+        <cfdi:Concepto ClaveProdServ="93141500" Cantidad="2" ClaveUnidad="E51" Descripcion="Hospedaje en hotel - habitación ejecutiva" ValorUnitario="800.00" Importe="1600.00"/>
+        <cfdi:Concepto ClaveProdServ="72141600" Cantidad="1" ClaveUnidad="E48" Descripcion="Servicios de transporte terrestre - taxi aeropuerto" ValorUnitario="450.00" Importe="450.00"/>
+        <cfdi:Concepto ClaveProdServ="90101501" Cantidad="3" ClaveUnidad="E48" Descripcion="Servicios de alimentación - comidas de negocios" ValorUnitario="150.00" Importe="450.00"/>
+    </cfdi:Conceptos>
+    <cfdi:Complemento>
+        <tfd:TimbreFiscalDigital xmlns:tfd="http://www.sat.gob.mx/TimbreFiscalDigital" UUID="12345678-1234-1234-1234-123456789012" FechaTimbrado="2024-01-15T10:35:00"/>
+    </cfdi:Complemento>
+</cfdi:Comprobante>

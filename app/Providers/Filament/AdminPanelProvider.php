@@ -59,6 +59,10 @@ class AdminPanelProvider extends PanelProvider
             ->homeUrl('/admin/travel-requests') // Redirección directa a solicitudes de viajes
             ->sidebarCollapsibleOnDesktop() // Sidebar colapsable para mejor UX
             ->breadcrumbs(false) // Simplificar navegación
+            ->renderHook(
+                'panels::head.end',
+                fn (): string => '<meta name="csrf-token" content="' . csrf_token() . '">'
+            )
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 // Widgets del dashboard eliminados para mejorar rendimiento

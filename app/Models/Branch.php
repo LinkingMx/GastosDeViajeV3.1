@@ -70,7 +70,7 @@ class Branch extends Model
             }
 
             // Validar formato básico
-            if (! preg_match('/^[A-Z&Ñ]{3,4}[0-9]{6}[A-Z0-9]{3}$/', $rfc)) {
+            if (! preg_match('/^[A-ZÑ&]{3,4}[0-9]{6}[A-Z0-9]{3}$/', $rfc)) {
                 throw new \InvalidArgumentException(
                     'El formato del RFC no es válido.'
                 );

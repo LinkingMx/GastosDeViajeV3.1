@@ -192,6 +192,7 @@ class TravelRequest extends Model
             'travel_review' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
             'travel_approved' => 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
             'travel_rejected' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+            'pending_verification' => 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
             default => 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
         };
     }
@@ -210,6 +211,7 @@ class TravelRequest extends Model
             'travel_review' => 'En Revisión de Viajes',
             'travel_approved' => 'Aprobada Final',
             'travel_rejected' => 'Rechazada por Viajes',
+            'pending_verification' => 'Por Comprobar',
             default => ucfirst($this->status),
         };
     }
@@ -400,6 +402,14 @@ class TravelRequest extends Model
             'advance_deposit_made_by' => $user->id,
             'advance_deposit_amount' => $amount,
             'advance_deposit_notes' => $notes,
+            'status' => 'pending_verification', // Cambiar estado a "Por comprobar"
+        ]);
+        
+        // Crear comentario automático del cambio de estado
+        $this->comments()->create([
+            'user_id' => $user->id,
+            'comment' => 'Depósito de anticipo realizado. La solicitud está ahora pendiente de comprobación de gastos.',
+            'type' => 'treasury_deposit',
         ]);
     }
 
@@ -428,6 +438,14 @@ class TravelRequest extends Model
             'advance_deposit_made_by' => null,
             'advance_deposit_amount' => null,
             'advance_deposit_notes' => null,
+            'status' => 'travel_approved', // Regresar a estado aprobado final
+        ]);
+        
+        // Crear comentario del cambio
+        $this->comments()->create([
+            'user_id' => $user->id,
+            'comment' => 'Depósito de anticipo desmarcado. La solicitud regresa al estado de aprobada final.',
+            'type' => 'treasury_unmark',
         ]);
     }
 
