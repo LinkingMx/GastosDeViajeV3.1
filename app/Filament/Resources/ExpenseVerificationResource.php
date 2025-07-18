@@ -41,7 +41,6 @@ class ExpenseVerificationResource extends Resource
                             ->options(function () {
                                 return TravelRequest::with(['user', 'destinationCountry'])
                                     ->where('user_id', auth()->id()) // Solo mis propias solicitudes
-                                    ->where('advance_deposit_made', true)
                                     ->whereIn('status', ['travel_approved', 'pending_verification']) // Solo solicitudes aprobadas finalmente o por comprobar
                                     ->get()
                                     ->mapWithKeys(function ($request) {
@@ -58,7 +57,7 @@ class ExpenseVerificationResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->helperText('Solo se muestran solicitudes aprobadas finalmente con depósito de anticipo confirmado'),
+                            ->helperText('Solo se muestran solicitudes aprobadas finalmente (incluye reembolsos)'),
 
                         Forms\Components\TextInput::make('uuid')
                             ->label('Folio UUID')

@@ -39,15 +39,34 @@ class BankResource extends Resource
                                 Forms\Components\TextInput::make('code')
                                     ->label('Código')
                                     ->required()
+                                    ->requiredWithoutAll(['name'])
                                     ->maxLength(10)
+                                    ->minLength(2)
                                     ->unique(ignoreRecord: true)
-                                    ->helperText('Código único del banco'),
+                                    ->alpha()
+                                    ->helperText('Código único del banco')
+                                    ->validationMessages([
+                                        'required' => 'El código es obligatorio.',
+                                        'max' => 'El código no puede tener más de :max caracteres.',
+                                        'min' => 'El código debe tener al menos :min caracteres.',
+                                        'unique' => 'Este código ya está registrado.',
+                                        'alpha' => 'El código solo puede contener letras.',
+                                    ]),
 
                                 Forms\Components\TextInput::make('name')
                                     ->label('Nombre')
                                     ->required()
                                     ->maxLength(255)
-                                    ->unique(ignoreRecord: true),
+                                    ->minLength(3)
+                                    ->unique(ignoreRecord: true)
+                                    ->regex('/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/')
+                                    ->validationMessages([
+                                        'required' => 'El nombre es obligatorio.',
+                                        'max' => 'El nombre no puede tener más de :max caracteres.',
+                                        'min' => 'El nombre debe tener al menos :min caracteres.',
+                                        'unique' => 'Este nombre de banco ya está registrado.',
+                                        'regex' => 'El nombre solo puede contener letras y espacios.',
+                                    ]),
                             ]),
                     ]),
             ]);

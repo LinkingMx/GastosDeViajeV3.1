@@ -10,23 +10,19 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\ViewColumn;
 
 class TravelRequestResource extends Resource
 {
     protected static ?string $model = TravelRequest::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
-
     protected static ?string $navigationGroup = null; // Sin grupo para que aparezca al inicio
-
     protected static ?string $navigationLabel = 'Solicitudes de Viaje'; // Label específico
-
     protected static ?string $modelLabel = 'Solicitud de Viaje';
-
     protected static ?string $pluralModelLabel = 'Solicitudes de Viaje';
-
     protected static ?int $navigationSort = 0; // Orden 0 para ser el primero
-
     protected static bool $shouldRegisterNavigation = true;
 
     public static function form(Form $form): Form
@@ -40,34 +36,43 @@ class TravelRequestResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query) => $query->with(['user', 'user.department.authorizer', 'authorizer']))
             ->columns([
+               
                 Tables\Columns\TextColumn::make('folio')
                     ->label('Folio')
-                    ->searchable(['uuid'])
+                    ->getStateUsing(fn ($record) => $record->folio)
                     ->badge()
                     ->color('primary')
-                    ->icon('heroicon-m-hashtag'),
-
+                    ->searchable(['uuid'])
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderBy('uuid', $direction);
+                    }),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Solicitante')
-                    ->searchable()
+                    ->badge()
+                    ->color('primary')
                     ->sortable(),
-                Tables\Columns\TextColumn::make('destination_city')
-                    ->label('Destino')
-                    ->searchable(),
+                Tables\Columns\ViewColumn::make('origin_destination')
+                    ->label('Origen / Destino')
+                    ->view('filament.tables.columns.origin-destination')
+                    ->searchable(['origin_city', 'destination_city']),
                 Tables\Columns\TextColumn::make('departure_date')
-                    ->label('Fecha Salida')
+                    ->label('Fecha de Salida')
                     ->date('d/m/Y')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('return_date')
-                    ->label('Fecha Regreso')
+                    ->label('Fecha de Regreso')
                     ->date('d/m/Y')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
                 Tables\Columns\TextColumn::make('actualAuthorizer.name')
                     ->label('Autorizador')
-                    ->searchable()
                     ->sortable()
-                    ->placeholder('Sin autorizador'),
+                    ->placeholder('Sin autorizador')
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
                 Tables\Columns\TextColumn::make('status_display')
                     ->label('Estado')
                     ->badge()
@@ -177,7 +182,9 @@ class TravelRequestResource extends Resource
                     ->label('Enviada')
                     ->date('d/m/Y H:i')
                     ->placeholder('No enviada')
-                    ->sortable(),
+                    ->sortable()
+                    ->toggleable()
+                    ->toggledHiddenByDefault(),
             ])
             ->recordUrl(fn ($record): string => static::getUrl('view', ['record' => $record]))
             ->filters([
@@ -196,12 +203,54 @@ class TravelRequestResource extends Resource
                     ]),
             ])
             ->actions([
-                // Acciones principales siempre visibles
-                Tables\Actions\EditAction::make()
-                    ->visible(fn ($record) => $record && $record->canBeEdited() && auth()->id() === $record->user_id),
-
-                // Grupo de acciones de autorización departamental
+                // Todas las acciones agrupadas en un solo botón "Acciones"
                 Tables\Actions\ActionGroup::make([
+                    // Acciones del usuario propietario
+                    Tables\Actions\EditAction::make()
+                        ->visible(fn ($record) => $record && $record->canBeEdited() && auth()->id() === $record->user_id),
+
+                    Tables\Actions\Action::make('submitForAuthorization')
+                        ->label('Enviar a Autorización')
+                        ->icon('heroicon-o-paper-airplane')
+                        ->color('primary')
+                        ->requiresConfirmation()
+                        ->modalHeading('Enviar Solicitud a Autorización')
+                        ->modalDescription('¿Estás seguro de que deseas enviar esta solicitud para autorización? Una vez enviada, no podrás realizar más cambios.')
+                        ->modalSubmitActionLabel('Sí, Enviar')
+                        ->action(function ($record) {
+                            try {
+                                // Enviar a autorización usando el método del modelo
+                                $record->submitForAuthorization();
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Solicitud Enviada')
+                                    ->body('Tu solicitud ha sido enviada para autorización a '.$record->actual_authorizer->name)
+                                    ->success()
+                                    ->send();
+
+                            } catch (\Exception $e) {
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Error al Enviar')
+                                    ->body('Ocurrió un error al enviar la solicitud: '.$e->getMessage())
+                                    ->danger()
+                                    ->send();
+
+                                \Log::error('Error submitting travel request: '.$e->getMessage(), [
+                                    'record_id' => $record->id,
+                                    'user_id' => auth()->id(),
+                                    'trace' => $e->getTraceAsString(),
+                                ]);
+                            }
+                        })
+                        ->visible(fn ($record) => $record && $record->canBeSubmitted() && $record->actual_authorizer && auth()->id() === $record->user_id),
+
+                    // Separador visual
+                    Tables\Actions\Action::make('separator1')
+                        ->label('— Autorización Departamental —')
+                        ->disabled()
+                        ->visible(fn ($record) => $record && $record->canBeAuthorizedBy(auth()->user())),
+
+                    // Acciones de autorización departamental
                     Tables\Actions\Action::make('approve')
                         ->label('Aprobar')
                         ->icon('heroicon-o-check-circle')
@@ -219,6 +268,7 @@ class TravelRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
+
                     Tables\Actions\Action::make('reject')
                         ->label('Rechazar')
                         ->icon('heroicon-o-x-circle')
@@ -237,6 +287,7 @@ class TravelRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
+
                     Tables\Actions\Action::make('put_in_revision')
                         ->label('Revisar')
                         ->icon('heroicon-o-pencil-square')
@@ -249,18 +300,14 @@ class TravelRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
-                ])
-                    ->label('Autorización')
-                    ->icon('heroicon-m-check-badge')
-                    ->color('warning')
-                    ->button()
-                    ->visible(fn ($record) => $record && (
-                        $record->canBeAuthorizedBy(auth()->user()) ||
-                        $record->canBeRevisedBy(auth()->user())
-                    )),
 
-                // Grupo de acciones del equipo de viajes
-                Tables\Actions\ActionGroup::make([
+                    // Separador visual
+                    Tables\Actions\Action::make('separator2')
+                        ->label('— Equipo de Viajes —')
+                        ->disabled()
+                        ->visible(fn ($record) => $record && $record->canBeTravelReviewedBy(auth()->user())),
+
+                    // Acciones del equipo de viajes
                     Tables\Actions\Action::make('travel_approve')
                         ->label('Aprobar Viajes')
                         ->icon('heroicon-o-check-circle')
@@ -278,6 +325,7 @@ class TravelRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
+
                     Tables\Actions\Action::make('travel_reject')
                         ->label('Rechazar Viajes')
                         ->icon('heroicon-o-x-circle')
@@ -296,6 +344,7 @@ class TravelRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
+
                     Tables\Actions\Action::make('travel_edit_expenses')
                         ->label('Editar Gastos')
                         ->icon('heroicon-o-pencil')
@@ -339,15 +388,14 @@ class TravelRequestResource extends Resource
                                 ->success()
                                 ->send();
                         }),
-                ])
-                    ->label('Equipo de Viajes')
-                    ->icon('heroicon-m-map')
-                    ->color('primary')
-                    ->button()
-                    ->visible(fn ($record) => $record && $record->canBeTravelReviewedBy(auth()->user())),
 
-                // Grupo de acciones de archivos
-                Tables\Actions\ActionGroup::make([
+                    // Separador visual
+                    Tables\Actions\Action::make('separator3')
+                        ->label('— Gestión de Archivos —')
+                        ->disabled()
+                        ->visible(fn ($record) => $record && $record->canUploadAttachments(auth()->user())),
+
+                    // Acción de subir archivos (movida del ActionGroup anidado)
                     Tables\Actions\Action::make('upload_attachments')
                         ->label('Subir Archivos')
                         ->icon('heroicon-o-paper-clip')
@@ -392,7 +440,7 @@ class TravelRequestResource extends Resource
                                 $fileSize = filesize($fullPath);
 
                                 // Crear el registro del attachment
-                                $record->attachments()->create([
+                                $attachment = $record->attachments()->create([
                                     'uploaded_by' => auth()->id(),
                                     'file_name' => $originalName,
                                     'file_path' => $filePath,
@@ -401,6 +449,55 @@ class TravelRequestResource extends Resource
                                     'attachment_type_id' => $data['attachment_type_id'],
                                     'description' => $data['description'] ?? null,
                                 ]);
+
+                                // Obtener el tipo de archivo para la notificación
+                                $attachmentType = \App\Models\AttachmentType::find($data['attachment_type_id']);
+                                $attachmentTypeName = $attachmentType ? $attachmentType->name : 'Documento';
+
+                                // Notificar al solicitante si el que sube es del equipo de tesorería O del equipo de viajes
+                                \Log::info("Usuario que sube archivo: " . auth()->user()->name . " (ID: " . auth()->id() . ")");
+                                \Log::info("Es del equipo de tesorería: " . (auth()->user()->isTreasuryTeamMember() ? 'SÍ' : 'NO'));
+                                \Log::info("Es del equipo de viajes: " . (auth()->user()->isTravelTeamMember() ? 'SÍ' : 'NO'));
+                                
+                                if (auth()->user()->isTreasuryTeamMember() || auth()->user()->isTravelTeamMember()) {
+                                    \Log::info("Enviando notificación a usuario solicitante: " . $record->user->email);
+                                    
+                                    // Determinar el equipo que sube el archivo
+                                    $uploaderTeam = auth()->user()->isTreasuryTeamMember() ? 'tesorería' : 'viajes';
+                                    
+
+                                    // Enviar correo al solicitante
+                                    try {
+                                        \Log::info("Intentando enviar correo de archivo adjunto");
+                                        \Illuminate\Support\Facades\Mail::to($record->user->email)
+                                            ->send(new \App\Mail\TeamFileUploadedMail(
+                                                $record,
+                                                $attachmentTypeName,
+                                                $originalName,
+                                                auth()->user()->name,
+                                                $uploaderTeam,
+                                                $filePath
+                                            ));
+                                        \Log::info("Correo de archivo adjunto enviado exitosamente");
+                                    } catch (\Exception $e) {
+                                        \Log::error("Error enviando correo de archivo adjunto: " . $e->getMessage());
+                                    }
+
+                                    // Crear notificación de campanita al solicitante
+                                    try {
+                                        \Log::info("Enviando notificación de campanita al usuario");
+                                        
+                                        $record->user->notify(new \App\Notifications\TravelRequestNotification(
+                                            '📄 Nuevo Archivo Adjunto',
+                                            "El equipo de {$uploaderTeam} ha adjuntado un archivo ({$attachmentTypeName}) a tu solicitud {$record->folio}",
+                                            $record
+                                        ));
+                                            
+                                        \Log::info("Notificación de campanita guardada en base de datos");
+                                    } catch (\Exception $e) {
+                                        \Log::error("Error enviando notificación de campanita: " . $e->getMessage());
+                                    }
+                                }
 
                                 \Filament\Notifications\Notification::make()
                                     ->title('Archivo adjuntado exitosamente')
@@ -492,18 +589,14 @@ class TravelRequestResource extends Resource
                                 ->color('gray')
                                 ->close(),
                         ]),
-                ])
-                    ->label('Archivos')
-                    ->icon('heroicon-m-paper-clip')
-                    ->color('gray')
-                    ->button()
-                    ->visible(fn ($record) => $record && (
-                        $record->canUploadAttachments(auth()->user()) ||
-                        ($record->status === 'travel_approved' && $record->attachments()->count() > 0)
-                    )),
 
-                // Grupo de acciones de tesorería
-                Tables\Actions\ActionGroup::make([
+                    // Separador visual
+                    Tables\Actions\Action::make('separator4')
+                        ->label('— Tesorería —')
+                        ->disabled()
+                        ->visible(fn ($record) => $record && auth()->user()->isTreasuryTeamMember()),
+
+                    // Acciones de tesorería (movidas del ActionGroup anidado)
                     Tables\Actions\Action::make('mark_advance_deposit')
                         ->label('Marcar Depósito')
                         ->icon('heroicon-o-banknotes')
@@ -656,15 +749,10 @@ class TravelRequestResource extends Resource
                                     ->send();
                             }
                         }),
-                ])
-                    ->label('Tesorería')
-                    ->icon('heroicon-m-banknotes')
-                    ->color('success')
-                    ->button()
-                    ->visible(fn ($record) => $record && auth()->user()->isTreasuryTeamMember() &&
-                        ($record->canMarkAdvanceDeposit(auth()->user()) ||
-                         $record->canUnmarkAdvanceDeposit(auth()->user()) ||
-                         ($record->advance_deposit_made && in_array($record->status, ['travel_approved', 'pending_verification'])))),
+            ])
+                ->label('')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->button(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make()
@@ -695,7 +783,9 @@ class TravelRequestResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->with(['user', 'user.department.authorizer', 'authorizer']); // Cargar relaciones necesarias
+        
         $user = Auth::user();
 
         // Los super_admin pueden ver todo

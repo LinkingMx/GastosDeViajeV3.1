@@ -847,68 +847,8 @@ class EditTravelRequest extends EditRecord
             return [];
         }
 
-        $actions = [];
-
-        // Botón para enviar a autorización
-        if ($record->canBeSubmitted() && $record->actual_authorizer) {
-            $actions[] = Action::make('submitForAuthorization')
-                ->label('Enviar a Autorización')
-                ->color('primary')
-                ->icon('heroicon-o-paper-airplane')
-                ->action(function () {
-                    try {
-                        // Validar campos requeridos antes de enviar
-                        $data = $this->form->getState();
-
-                        $requiredFields = [
-                            'branch_id', 'origin_country_id', 'origin_city',
-                            'destination_country_id', 'destination_city',
-                            'departure_date', 'return_date',
-                        ];
-
-                        foreach ($requiredFields as $field) {
-                            if (empty($data[$field])) {
-                                Notification::make()
-                                    ->title('Campos Incompletos')
-                                    ->body('Por favor completa todos los campos obligatorios antes de enviar.')
-                                    ->warning()
-                                    ->send();
-
-                                return;
-                            }
-                        }
-
-                        // Guardar cambios primero
-                        $this->getRecord()->update($data);
-
-                        // Enviar a autorización usando el método del modelo
-                        $this->getRecord()->submitForAuthorization();
-
-                        Notification::make()
-                            ->title('Solicitud Enviada')
-                            ->body('Tu solicitud ha sido enviada para autorización a '.$this->getRecord()->actual_authorizer->name)
-                            ->success()
-                            ->send();
-
-                        $this->redirect($this->getResource()::getUrl('view', ['record' => $this->getRecord()]));
-
-                    } catch (\Exception $e) {
-                        Notification::make()
-                            ->title('Error al Enviar')
-                            ->body('Ocurrió un error al enviar la solicitud: '.$e->getMessage())
-                            ->danger()
-                            ->send();
-
-                        \Log::error('Error submitting travel request: '.$e->getMessage(), [
-                            'record_id' => $this->getRecord()->id,
-                            'user_id' => auth()->id(),
-                            'trace' => $e->getTraceAsString(),
-                        ]);
-                    }
-                });
-        }
-
-        return $actions;
+        // No form actions needed - moved to header actions
+        return [];
     }
 
     protected function getHeaderActions(): array
@@ -918,6 +858,8 @@ class EditTravelRequest extends EditRecord
 
         // Solo mostrar acciones de header si el usuario es el propietario
         if (auth()->id() === $record->user_id) {
+
+            // Authorization button removed - now handled in list view table actions
 
             // Acción para eliminar (solo en draft y revision)
             if ($record->canBeEdited()) {
@@ -940,7 +882,8 @@ class EditTravelRequest extends EditRecord
                             ->success()
                             ->send();
 
-                        $this->redirect($this->getResource()::getUrl('edit', ['record' => $record]));
+                        // Refresh the page to update button states and record status
+                        return redirect()->refresh();
                     });
             }
         }

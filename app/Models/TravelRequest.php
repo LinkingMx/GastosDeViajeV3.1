@@ -277,6 +277,19 @@ class TravelRequest extends Model
             'comment' => 'Solicitud enviada para autorización.',
             'type' => 'submission',
         ]);
+
+        // Enviar correo al autorizador
+        if ($this->actual_authorizer) {
+            \Illuminate\Support\Facades\Mail::to($this->actual_authorizer->email)
+                ->send(new \App\Mail\TravelRequestPendingAuthorizationMail($this));
+
+            // Crear notificación de campanita al autorizador usando Laravel notifications
+            $this->actual_authorizer->notify(new \App\Notifications\TravelRequestNotification(
+                '⚠️ Solicitud Pendiente de Autorización',
+                "La solicitud de viaje {$this->folio} de {$this->user->name} requiere tu autorización.",
+                $this
+            ));
+        }
     }
 
     /**
@@ -295,6 +308,17 @@ class TravelRequest extends Model
             'comment' => $comment ?: 'Solicitud aprobada.',
             'type' => 'approval',
         ]);
+
+        // Enviar correo al solicitante notificando la autorización
+        \Illuminate\Support\Facades\Mail::to($this->user->email)
+            ->send(new \App\Mail\TravelRequestAuthorizedMail($this));
+
+        // Crear notificación de campanita al solicitante
+        $this->user->notify(new \App\Notifications\TravelRequestNotification(
+            '✅ Solicitud Autorizada',
+            "Tu solicitud de viaje {$this->folio} ha sido autorizada por {$this->authorizer->name}.",
+            $this
+        ));
 
         // NUEVA LÓGICA: Pasar automáticamente a revisión de viajes
         $this->moveToTravelReview();
@@ -417,6 +441,17 @@ class TravelRequest extends Model
             'comment' => 'Depósito de anticipo realizado. La solicitud está ahora pendiente de comprobación de gastos.',
             'type' => 'treasury_deposit',
         ]);
+
+        // Enviar correo al solicitante notificando el depósito
+        \Illuminate\Support\Facades\Mail::to($this->user->email)
+            ->send(new \App\Mail\TravelRequestAdvanceDepositMail($this));
+
+        // Crear notificación de campanita al solicitante
+        $this->user->notify(new \App\Notifications\TravelRequestNotification(
+            '💰 Anticipo Depositado',
+            "El anticipo para tu solicitud de viaje {$this->folio} ha sido depositado" . ($amount ? " por $" . number_format($amount, 2) : '') . " por el equipo de tesorería.",
+            $this
+        ));
     }
 
     /**
@@ -471,6 +506,20 @@ class TravelRequest extends Model
             'comment' => 'Solicitud enviada automáticamente a revisión del equipo de viajes.',
             'type' => 'system',
         ]);
+
+        // Enviar correo a todos los miembros del equipo de viajes
+        $travelTeamMembers = \App\Models\User::travelTeam()->get();
+        foreach ($travelTeamMembers as $member) {
+            \Illuminate\Support\Facades\Mail::to($member->email)
+                ->send(new \App\Mail\TravelRequestPendingTravelReviewMail($this));
+
+            // Crear notificación de campanita para cada miembro del equipo de viajes
+            $member->notify(new \App\Notifications\TravelRequestNotification(
+                '🔍 Nueva Solicitud para Revisión',
+                "La solicitud de viaje {$this->folio} de {$this->user->name} requiere revisión del equipo de viajes.",
+                $this
+            ));
+        }
     }
 
     /**
@@ -492,6 +541,17 @@ class TravelRequest extends Model
             'comment' => $comment ?? 'Solicitud aprobada por el equipo de viajes.',
             'type' => 'travel_approval',
         ]);
+
+        // Enviar correo al solicitante
+        \Illuminate\Support\Facades\Mail::to($this->user->email)
+            ->send(new \App\Mail\TravelRequestTravelApprovedMail($this));
+
+        // Crear notificación de campanita al solicitante
+        $this->user->notify(new \App\Notifications\TravelRequestNotification(
+            '🎉 Viaje Aprobado Final',
+            "Tu solicitud de viaje {$this->folio} ha sido aprobada finalmente por el equipo de viajes.",
+            $this
+        ));
     }
 
     /**

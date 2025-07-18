@@ -33,13 +33,24 @@ class CreateTravelRequest extends CreateRecord
         return [
             Step::make('Información General')
                 ->description('Datos principales del viaje')
-                ->schema($this->getStepOneSchema()),
+                ->schema($this->getStepOneSchema())
+                ->completedIcon('heroicon-o-check')
+                ->afterValidation(function () {
+                    // Trigger wizard state update after validation
+                    $this->dispatch('wizard-step-completed', step: 1);
+                }),
             Step::make('Servicios y Viáticos')
                 ->description('Solicitudes de transporte, hospedaje y viáticos')
-                ->schema($this->getStepTwoSchema()),
+                ->schema($this->getStepTwoSchema())
+                ->completedIcon('heroicon-o-check')
+                ->afterValidation(function () {
+                    // Trigger wizard state update after validation
+                    $this->dispatch('wizard-step-completed', step: 2);
+                }),
             Step::make('Resumen y Envío')
                 ->description('Revisión final y total estimado')
-                ->schema($this->getStepThreeSchema()),
+                ->schema($this->getStepThreeSchema())
+                ->completedIcon('heroicon-o-check'),
         ];
     }
 
@@ -364,6 +375,7 @@ class CreateTravelRequest extends CreateRecord
                     Repeater::make('custom_expenses_data')
                         ->label('Gastos')
                         ->columns(3)
+                        ->defaultItems(0)
                         ->schema([
                             TextInput::make('concept')
                                 ->label('Concepto')
@@ -763,24 +775,24 @@ class CreateTravelRequest extends CreateRecord
         return $data;
     }
 
-    public bool $isSubmittingAndContinuing = false;
-
     protected function afterCreate(): void
     {
         $record = $this->getRecord();
+        
         // Determinar el autorizador basado en la configuración del usuario
         $authorizer = $record->actual_authorizer;
-
         if ($authorizer) {
-            $record->update(['authorizer_id' => $authorizer->id]);
-        }
-
-        if ($this->isSubmittingAndContinuing) {
-            $this->redirect(self::$resource::getUrl('edit', ['record' => $record]));
-        } else {
-            $this->redirect(self::$resource::getUrl('index'));
+            // Use updateQuietly to avoid triggering events that might send duplicate emails
+            $record->updateQuietly(['authorizer_id' => $authorizer->id]);
         }
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return static::getResource()::getUrl('index');
+    }
+
+    public bool $isSubmittingAndContinuing = false;
 
     // Desactivar la notificación estándar de Filament
     protected function getCreatedNotification(): ?\Filament\Notifications\Notification
@@ -793,17 +805,49 @@ class CreateTravelRequest extends CreateRecord
 
     protected function getFormActions(): array
     {
-        return [
-            $this->getCreateFormAction(),
-            $this->getCreateAndSubmitFormAction(),
-            $this->getCancelFormAction(),
-        ];
+        // No form actions needed - using wizard buttons
+        return [];
+    }
+
+    protected function canCreateRecord(): bool
+    {
+        $currentStep = $this->getCurrentStep();
+        
+        // Only allow creation on the final step (step 3)
+        if ($currentStep < 2) {
+            return false;
+        }
+
+        // Validate that required fields from all steps are filled
+        $data = $this->form->getState();
+        
+        // Step 1 validation
+        if (empty($data['branch_id']) || 
+            empty($data['origin_country_id']) || 
+            empty($data['origin_city']) ||
+            empty($data['destination_country_id']) || 
+            empty($data['destination_city']) ||
+            empty($data['departure_date']) || 
+            empty($data['return_date'])) {
+            return false;
+        }
+
+        return true;
+    }
+
+    protected function getCurrentStep(): int
+    {
+        return $this->form->getComponent('wizard')?->getCurrentStep() ?? 0;
     }
 
     protected function getCreateFormAction(): \Filament\Actions\Action
     {
         return parent::getCreateFormAction()
-            ->label('Crear Solicitud');
+            ->label('Crear Solicitud')
+            ->action(function () {
+                $this->isSubmittingAndContinuing = false;
+                $this->create();
+            });
     }
 
     protected function getCreateAndSubmitFormAction(): \Filament\Actions\Action
@@ -814,7 +858,7 @@ class CreateTravelRequest extends CreateRecord
                 $this->isSubmittingAndContinuing = true;
                 $this->create();
 
-                // Devolver una respuesta de redirección en lugar de llamar a $this->redirect()
+                // Redirect to edit page for "create and continue" functionality
                 return redirect(self::$resource::getUrl('edit', ['record' => $this->getRecord()]));
             })
             ->color('primary')

@@ -7,25 +7,12 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use App\Filament\Resources\TravelRequestResource;
 
-class TravelRequestCreated extends Mailable
+class TravelRequestCreatedMail extends Mailable
 {
     use SerializesModels;
 
-    /**
-     * The travel request instance.
-     *
-     * @var \App\Models\TravelRequest
-     */
-    public $travelRequest;
-
-    /**
-     * The URL to view the travel request.
-     *
-     * @var string
-     */
-    public $viewUrl;
+    public TravelRequest $travelRequest;
 
     /**
      * Create a new message instance.
@@ -33,7 +20,6 @@ class TravelRequestCreated extends Mailable
     public function __construct(TravelRequest $travelRequest)
     {
         $this->travelRequest = $travelRequest;
-        $this->viewUrl = TravelRequestResource::getUrl('view', ['record' => $travelRequest]);
     }
 
     /**
@@ -42,7 +28,7 @@ class TravelRequestCreated extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Solicitud de Viaje Creada - Folio: ' . $this->travelRequest->folio,
+            subject: 'Nueva Solicitud de Viaje Creada - ' . $this->travelRequest->folio,
         );
     }
 
@@ -53,6 +39,10 @@ class TravelRequestCreated extends Mailable
     {
         return new Content(
             view: 'emails.travel-request-created',
+            with: [
+                'travelRequest' => $this->travelRequest,
+                'viewUrl' => route('filament.admin.resources.travel-requests.view', $this->travelRequest),
+            ],
         );
     }
 

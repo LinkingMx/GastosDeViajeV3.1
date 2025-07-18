@@ -611,21 +611,7 @@ class ViewTravelRequest extends ViewRecord
                 $actions[] = Actions\EditAction::make();
             }
 
-            // Enviar a autorización (solo en draft/revision)
-            if ($record->canBeSubmitted() && $record->actual_authorizer) {
-                $actions[] = Action::make('submitForAuthorization')
-                    ->label('Enviar a Autorización')
-                    ->icon('heroicon-o-paper-airplane')
-                    ->color('primary')
-                    ->action(function () use ($record) {
-                        $record->submitForAuthorization();
-                        Notification::make()
-                            ->title('Solicitud Enviada')
-                            ->body('La solicitud ha sido enviada para autorización.')
-                            ->success()
-                            ->send();
-                    });
-            }
+            // Authorization button removed - now handled in list view table actions
 
             // Poner en revisión (solo si está rechazada)
             if ($record->canBeRevisedBy($user)) {
