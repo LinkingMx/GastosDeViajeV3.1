@@ -590,6 +590,103 @@ class TravelRequestResource extends Resource
                                 ->close(),
                         ]),
 
+                    Tables\Actions\Action::make('delete_attachment')
+                        ->label('Eliminar Archivo')
+                        ->icon('heroicon-o-trash')
+                        ->color('danger')
+                        ->visible(fn ($record) => $record && auth()->user()->isTravelTeamMember() && $record->attachments()->count() > 0)
+                        ->form([
+                            \Filament\Forms\Components\Select::make('attachment_id')
+                                ->label('Archivo a eliminar')
+                                ->required()
+                                ->options(function ($record) {
+                                    return $record->attachments()
+                                        ->with('attachmentType')
+                                        ->get()
+                                        ->mapWithKeys(function ($attachment) {
+                                            $typeLabel = $attachment->attachmentType?->name ?? 'Documento';
+                                            return [$attachment->id => "{$typeLabel} - {$attachment->file_name}"];
+                                        });
+                                })
+                                ->searchable(),
+                            \Filament\Forms\Components\Textarea::make('reason')
+                                ->label('Motivo de eliminación (opcional)')
+                                ->placeholder('Explica por qué eliminas este archivo...')
+                                ->rows(3),
+                        ])
+                        ->action(function ($record, array $data) {
+                            try {
+                                $attachment = \App\Models\TravelRequestAttachment::findOrFail($data['attachment_id']);
+                                
+                                // Verificar que el archivo pertenece a esta solicitud
+                                if ($attachment->travel_request_id !== $record->id) {
+                                    throw new \Exception('El archivo no pertenece a esta solicitud');
+                                }
+
+                                // Guardar información del archivo antes de eliminarlo
+                                $attachmentType = $attachment->attachmentType?->name ?? 'Documento';
+                                $fileName = $attachment->file_name;
+                                $reason = $data['reason'] ?? null;
+
+                                // Eliminar el archivo físico y el registro
+                                $attachment->delete();
+
+                                // Registrar actividad
+                                $record->activities()->create([
+                                    'user_id' => auth()->id(),
+                                    'comment' => 'Archivo eliminado: ' . $fileName . ($reason ? ' - Motivo: ' . $reason : ''),
+                                    'type' => 'file_deleted',
+                                ]);
+
+                                // Enviar correo al solicitante
+                                try {
+                                    \Log::info("Enviando correo de archivo eliminado");
+                                    \Illuminate\Support\Facades\Mail::to($record->user->email)
+                                        ->send(new \App\Mail\TeamFileDeletedMail(
+                                            $record,
+                                            $attachmentType,
+                                            $fileName,
+                                            auth()->user()->name,
+                                            'viajes',
+                                            $reason
+                                        ));
+                                    \Log::info("Correo de archivo eliminado enviado exitosamente");
+                                } catch (\Exception $e) {
+                                    \Log::error("Error enviando correo de archivo eliminado: " . $e->getMessage());
+                                }
+
+                                // Crear notificación de campanita al solicitante
+                                try {
+                                    \Log::info("Enviando notificación de campanita por archivo eliminado");
+                                    
+                                    $record->user->notify(new \App\Notifications\TravelRequestNotification(
+                                        '🗑️ Archivo Eliminado',
+                                        "El equipo de viajes ha eliminado el archivo '{$fileName}' ({$attachmentType}) de tu solicitud {$record->folio}" . ($reason ? ". Motivo: {$reason}" : '.'),
+                                        $record
+                                    ));
+                                        
+                                    \Log::info("Notificación de campanita por archivo eliminado enviada");
+                                } catch (\Exception $e) {
+                                    \Log::error("Error enviando notificación de campanita por archivo eliminado: " . $e->getMessage());
+                                }
+
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Archivo eliminado exitosamente')
+                                    ->body("El archivo '{$fileName}' ha sido eliminado y se ha notificado al solicitante.")
+                                    ->success()
+                                    ->send();
+
+                            } catch (\Exception $e) {
+                                \Log::error("Error eliminando archivo: " . $e->getMessage());
+                                
+                                \Filament\Notifications\Notification::make()
+                                    ->title('Error al eliminar archivo')
+                                    ->body('Ocurrió un error al eliminar el archivo: '.$e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+
                     // Separador visual
                     Tables\Actions\Action::make('separator4')
                         ->label('— Tesorería —')

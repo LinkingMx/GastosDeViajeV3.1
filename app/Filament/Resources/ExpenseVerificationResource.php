@@ -38,7 +38,19 @@ class ExpenseVerificationResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('travel_request_id')
                             ->label('Solicitud de Viaje')
-                            ->options(function () {
+                            ->options(function ($operation, $record) {
+                                // En edición, solo mostrar la solicitud actual
+                                if ($operation === 'edit' && $record && $record->travelRequest) {
+                                    $request = $record->travelRequest;
+                                    $departureDate = $request->departure_date ? $request->departure_date->format('d/m/Y') : 'Sin fecha';
+                                    $destination = $request->destination_city
+                                        ? $request->destination_city.', '.($request->destinationCountry?->name ?? 'Sin país')
+                                        : ($request->destinationCountry?->name ?? 'Sin destino');
+                                    $label = $request->folio.' - '.$departureDate.' - '.$destination;
+                                    return [$request->id => $label];
+                                }
+                                
+                                // En creación, mostrar todas las opciones disponibles
                                 return TravelRequest::with(['user', 'destinationCountry'])
                                     ->where('user_id', auth()->id()) // Solo mis propias solicitudes
                                     ->whereIn('status', ['travel_approved', 'pending_verification']) // Solo solicitudes aprobadas finalmente o por comprobar
@@ -57,7 +69,10 @@ class ExpenseVerificationResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required()
-                            ->helperText('Solo se muestran solicitudes aprobadas finalmente (incluye reembolsos)'),
+                            ->disabled(fn ($operation) => $operation === 'edit')
+                            ->helperText(fn ($operation) => $operation === 'edit' 
+                                ? 'La solicitud de viaje no puede ser modificada después de crear la comprobación'
+                                : 'Solo se muestran solicitudes aprobadas finalmente (incluye reembolsos)'),
 
                         Forms\Components\TextInput::make('uuid')
                             ->label('Folio UUID')
