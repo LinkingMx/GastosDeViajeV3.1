@@ -12,6 +12,11 @@ class RemoveAttachmentTypeEnumColumnV2 extends Migration
     public function up(): void
     {
         Schema::table('travel_request_attachments', function (Blueprint $table) {
+            // First drop the index if it exists
+            $table->dropIndex('tr_attachments_request_type_idx');
+        });
+        
+        Schema::table('travel_request_attachments', function (Blueprint $table) {
             // Remove the old attachment_type enum column if it exists
             if (Schema::hasColumn('travel_request_attachments', 'attachment_type')) {
                 $table->dropColumn('attachment_type');
