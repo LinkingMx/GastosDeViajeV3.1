@@ -12,7 +12,6 @@ class RemoveAttachmentTypeEnumColumnV2 extends Migration
      */
     public function up(): void
     {
-        $connection = Schema::connection(DB::connection());
         $driverName = DB::connection()->getDriverName();
         
         // Handle MySQL specific constraints
