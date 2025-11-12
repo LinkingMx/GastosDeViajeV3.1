@@ -11,6 +11,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Production seeders will be added here
+        $this->call([
+            GeneralSettingSeeder::class,
+        ]);
     }
 }
