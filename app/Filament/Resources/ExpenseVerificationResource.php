@@ -10,6 +10,7 @@ use App\Models\TravelRequest;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -368,10 +369,12 @@ class ExpenseVerificationResource extends Resource
                     ->badge()
                     ->color(fn ($record) => match ($record ? $record->status : null) {
                         'draft' => 'gray',
-                        'pending' => 'warning',
+                        'pending_review' => 'warning',
                         'approved' => 'success',
                         'rejected' => 'danger',
                         'revision' => 'info',
+                        'needs_high_auth' => 'warning',
+                        'high_auth_approved' => 'success',
                         'closed' => 'success',
                         default => 'gray',
                     })
@@ -432,10 +435,12 @@ class ExpenseVerificationResource extends Resource
                     ->label('Estado Autorización')
                     ->options([
                         'draft' => 'Borrador',
-                        'pending' => 'Pendiente de Autorización',
-                        'approved' => 'Autorizada',
+                        'pending_review' => 'Pendiente de Revisión',
+                        'approved' => 'Aprobada',
                         'rejected' => 'Rechazada',
                         'revision' => 'En Revisión',
+                        'needs_high_auth' => 'Requiere Autorización Mayor',
+                        'high_auth_approved' => 'Autorizada por Autorizador Mayor',
                         'closed' => 'Cerrada',
                     ])
                     ->default(null),
@@ -472,7 +477,157 @@ class ExpenseVerificationResource extends Resource
                             );
                     }),
             ])
-            ->actions([])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+
+                // Submit for Review Action (User can submit draft or revision)
+                Tables\Actions\Action::make('submit')
+                    ->label('Enviar a Revisión')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('primary')
+                    ->visible(fn (ExpenseVerification $record) =>
+                        $record->canBeSubmitted() && auth()->user()->id === $record->created_by
+                    )
+                    ->requiresConfirmation()
+                    ->modalHeading('Enviar Comprobación a Revisión')
+                    ->modalDescription('¿Está seguro de enviar esta comprobación para revisión del equipo de viajes?')
+                    ->modalSubmitActionLabel('Enviar')
+                    ->action(function (ExpenseVerification $record) {
+                        $record->submitForReview();
+
+                        Notification::make()
+                            ->success()
+                            ->icon('heroicon-o-check-circle')
+                            ->iconColor('primary')
+                            ->title('Comprobación Enviada')
+                            ->body('La comprobación ha sido enviada para revisión.')
+                            ->send();
+                    }),
+
+                // Approve Action (Travel Team)
+                Tables\Actions\Action::make('approve')
+                    ->label('Aprobar')
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(fn (ExpenseVerification $record) =>
+                        $record->canBeReviewedBy(auth()->user())
+                    )
+                    ->form([
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Comentarios (Opcional)')
+                            ->placeholder('Agregar comentarios sobre la aprobación...')
+                            ->rows(3),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Aprobar Comprobación')
+                    ->modalDescription('¿Está seguro de aprobar esta comprobación de gastos?')
+                    ->modalSubmitActionLabel('Aprobar')
+                    ->action(function (ExpenseVerification $record, array $data) {
+                        $record->approve(auth()->user(), $data['notes'] ?? null);
+
+                        Notification::make()
+                            ->success()
+                            ->icon('heroicon-o-check-circle')
+                            ->iconColor('primary')
+                            ->title('Comprobación Aprobada')
+                            ->body('La comprobación ha sido aprobada exitosamente.')
+                            ->send();
+                    }),
+
+                // Reject Action (Travel Team)
+                Tables\Actions\Action::make('reject')
+                    ->label('Rechazar')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->visible(fn (ExpenseVerification $record) =>
+                        $record->canBeReviewedBy(auth()->user())
+                    )
+                    ->form([
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Motivo del Rechazo')
+                            ->placeholder('Especifique el motivo del rechazo...')
+                            ->required()
+                            ->rows(3),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Rechazar Comprobación')
+                    ->modalDescription('Por favor proporcione el motivo del rechazo para que el usuario pueda corregir.')
+                    ->modalSubmitActionLabel('Rechazar')
+                    ->action(function (ExpenseVerification $record, array $data) {
+                        $record->reject(auth()->user(), $data['notes']);
+
+                        Notification::make()
+                            ->warning()
+                            ->icon('heroicon-o-x-circle')
+                            ->iconColor('danger')
+                            ->title('Comprobación Rechazada')
+                            ->body('La comprobación ha sido rechazada.')
+                            ->send();
+                    }),
+
+                // Escalate Action (Travel Team)
+                Tables\Actions\Action::make('escalate')
+                    ->label('Escalar a Autorizador Mayor')
+                    ->icon('heroicon-o-arrow-up-circle')
+                    ->color('warning')
+                    ->visible(fn (ExpenseVerification $record) =>
+                        $record->canBeReviewedBy(auth()->user())
+                    )
+                    ->form([
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Motivo de Escalación')
+                            ->placeholder('Especifique el motivo de escalación...')
+                            ->required()
+                            ->rows(3),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Escalar a Autorización Mayor')
+                    ->modalDescription('Esta comprobación será escalada al Autorizador Mayor para aprobación especial.')
+                    ->modalSubmitActionLabel('Escalar')
+                    ->action(function (ExpenseVerification $record, array $data) {
+                        $record->escalateToHighAuth(auth()->user(), $data['notes']);
+
+                        Notification::make()
+                            ->warning()
+                            ->icon('heroicon-o-arrow-up-circle')
+                            ->iconColor('warning')
+                            ->title('Comprobación Escalada')
+                            ->body('La comprobación ha sido escalada al Autorizador Mayor.')
+                            ->send();
+                    }),
+
+                // High Auth Approve Action (Autorizador Mayor only)
+                Tables\Actions\Action::make('high_auth_approve')
+                    ->label('Aprobar (Autorizador Mayor)')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->visible(fn (ExpenseVerification $record) =>
+                        $record->canBeApprovedByHighAuth(auth()->user())
+                    )
+                    ->form([
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Comentarios (Opcional)')
+                            ->placeholder('Agregar comentarios sobre la aprobación...')
+                            ->rows(3),
+                    ])
+                    ->requiresConfirmation()
+                    ->modalHeading('Aprobar Comprobación (Autorización Mayor)')
+                    ->modalDescription('¿Está seguro de aprobar esta comprobación como Autorizador Mayor?')
+                    ->modalSubmitActionLabel('Aprobar')
+                    ->action(function (ExpenseVerification $record, array $data) {
+                        $record->approveByHighAuth(auth()->user(), $data['notes'] ?? null);
+
+                        Notification::make()
+                            ->success()
+                            ->icon('heroicon-o-check-badge')
+                            ->iconColor('primary')
+                            ->title('Comprobación Aprobada')
+                            ->body('La comprobación ha sido aprobada por el Autorizador Mayor.')
+                            ->send();
+                    }),
+
+                Tables\Actions\DeleteAction::make(),
+            ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
