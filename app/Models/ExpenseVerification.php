@@ -19,6 +19,8 @@ class ExpenseVerification extends Model
         'rejected_at',
         'approved_by',
         'approval_notes',
+        'closed_at',
+        'closure_notes',
         'reimbursement_status',
         'reimbursement_made',
         'reimbursement_made_at',
@@ -42,6 +44,7 @@ class ExpenseVerification extends Model
         'submitted_at' => 'datetime',
         'approved_at' => 'datetime',
         'rejected_at' => 'datetime',
+        'closed_at' => 'datetime',
         'reimbursement_made_at' => 'datetime',
         'reimbursement_attachments' => 'array',
         'reopened_at' => 'datetime',
@@ -300,10 +303,13 @@ class ExpenseVerification extends Model
     {
         return match ($this->status) {
             'draft' => 'Borrador',
-            'pending' => 'Pendiente de Autorización',
-            'approved' => 'Autorizada',
+            'pending_review' => 'Pendiente de Revisión',
+            'approved' => 'Aprobada',
             'rejected' => 'Rechazada',
             'revision' => 'En Revisión',
+            'needs_high_auth' => 'Requiere Autorización Mayor',
+            'high_auth_approved' => 'Autorizada por Autorizador Mayor',
+            'closed' => 'Cerrada',
             default => ucfirst($this->status),
         };
     }
@@ -315,10 +321,13 @@ class ExpenseVerification extends Model
     {
         return match ($this->status) {
             'draft' => 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
-            'pending' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'pending_review' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
             'approved' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
             'rejected' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-            'revision' => 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+            'revision' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'needs_high_auth' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+            'high_auth_approved' => 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+            'closed' => 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
             default => 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
         };
     }
@@ -340,11 +349,11 @@ class ExpenseVerification extends Model
     }
 
     /**
-     * Check if the verification can be authorized by travel team.
+     * Check if the verification can be reviewed by travel team.
      */
-    public function canBeAuthorizedBy(User $user): bool
+    public function canBeReviewedBy(User $user): bool
     {
-        return $this->status === 'pending' && $user->isTravelTeamMember();
+        return $this->status === 'pending_review' && $user->isTravelTeamMember();
     }
 
     /**
@@ -356,26 +365,71 @@ class ExpenseVerification extends Model
     }
 
     /**
-     * Submit the verification for authorization.
+     * Submit the verification for review by travel team.
      */
-    public function submitForAuthorization(): void
+    public function submitForReview(): void
     {
         $this->update([
-            'status' => 'pending',
+            'status' => 'pending_review',
             'submitted_at' => now(),
         ]);
     }
 
 
     /**
+     * Escalate to high authorization (Autorizador Mayor).
+     */
+    public function escalateToHighAuth(User $reviewer, string $notes): void
+    {
+        $this->update([
+            'status' => 'needs_high_auth',
+            'approved_at' => now(),
+            'approved_by' => $reviewer->id,
+            'approval_notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Check if can be approved by high authorizer.
+     */
+    public function canBeApprovedByHighAuth(User $user): bool
+    {
+        $autorizadorMayorId = \App\Models\GeneralSetting::get()->autorizador_mayor_id;
+        return $this->status === 'needs_high_auth' &&
+               $autorizadorMayorId &&
+               $user->id === $autorizadorMayorId;
+    }
+
+    /**
+     * Approve by high authorizer.
+     */
+    public function approveByHighAuth(User $autorizador, ?string $notes = null): void
+    {
+        $this->update([
+            'status' => 'high_auth_approved',
+            'approved_at' => now(),
+            'approved_by' => $autorizador->id,
+            'approval_notes' => $notes,
+        ]);
+
+        // Check if reimbursement is needed after approval
+        if ($this->needsReimbursement()) {
+            $this->markForReimbursement();
+        } else {
+            // If no reimbursement needed, close automatically
+            $this->close($autorizador, 'Cerrada automáticamente - no requiere reembolso');
+        }
+    }
+
+    /**
      * Reject the verification with notes.
      */
-    public function reject(User $approver, string $notes): void
+    public function reject(User $reviewer, string $notes): void
     {
         $this->update([
             'status' => 'rejected',
             'rejected_at' => now(),
-            'approved_by' => $approver->id,
+            'approved_by' => $reviewer->id,
             'approval_notes' => $notes,
         ]);
     }
@@ -505,20 +559,44 @@ class ExpenseVerification extends Model
     }
 
     /**
-     * Override the approval method to check for reimbursement.
+     * Close the verification with notes.
      */
-    public function approve(User $approver, ?string $notes = null): void
+    public function close(User $user, ?string $notes = null): void
+    {
+        $this->update([
+            'status' => 'closed',
+            'closed_at' => now(),
+            'closure_notes' => $notes,
+        ]);
+    }
+
+    /**
+     * Check if verification can be closed manually.
+     */
+    public function canBeClosed(): bool
+    {
+        return in_array($this->status, ['approved', 'high_auth_approved']) &&
+               !$this->needsReimbursement();
+    }
+
+    /**
+     * Approve by travel team (standard approval).
+     */
+    public function approve(User $reviewer, ?string $notes = null): void
     {
         $this->update([
             'status' => 'approved',
             'approved_at' => now(),
-            'approved_by' => $approver->id,
+            'approved_by' => $reviewer->id,
             'approval_notes' => $notes,
         ]);
 
         // Check if reimbursement is needed after approval
         if ($this->needsReimbursement()) {
             $this->markForReimbursement();
+        } else {
+            // If no reimbursement needed, close automatically
+            $this->close($reviewer, 'Cerrada automáticamente - no requiere reembolso');
         }
     }
 
@@ -527,12 +605,12 @@ class ExpenseVerification extends Model
      */
     public function scopeActive($query)
     {
-        return $query->whereIn('status', ['draft', 'pending', 'revision']);
+        return $query->whereIn('status', ['draft', 'pending_review', 'revision', 'needs_high_auth']);
     }
 
     public function scopeProcessed($query)
     {
-        return $query->whereIn('status', ['approved', 'rejected', 'closed'])
+        return $query->whereIn('status', ['approved', 'high_auth_approved', 'rejected', 'closed'])
                     ->orWhereNotNull('reimbursement_status');
     }
 
@@ -680,7 +758,7 @@ class ExpenseVerification extends Model
      */
     public function isHistorical(): bool
     {
-        return in_array($this->status, ['approved', 'rejected', 'closed']) || 
+        return in_array($this->status, ['approved', 'high_auth_approved', 'rejected', 'closed']) ||
                !is_null($this->reimbursement_status);
     }
 

@@ -26,12 +26,14 @@ class ExpenseReceipt extends Model
         'expense_detail_id',
         'expense_category',
         'applied_amount',
+        'is_applicable',
     ];
 
     protected $casts = [
         'receipt_date' => 'date',
         'total_amount' => 'decimal:2',
         'applied_amount' => 'decimal:2',
+        'is_applicable' => 'boolean',
     ];
 
     public function expenseVerification(): BelongsTo

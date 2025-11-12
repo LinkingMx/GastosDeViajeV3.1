@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GeneralSetting extends Model
 {
@@ -13,6 +14,7 @@ class GeneralSetting extends Model
      */
     protected $fillable = [
         'dias_minimos_anticipacion',
+        'autorizador_mayor_id',
     ];
 
     /**
@@ -23,6 +25,14 @@ class GeneralSetting extends Model
     protected $casts = [
         'dias_minimos_anticipacion' => 'integer',
     ];
+
+    /**
+     * Relación con el usuario Autorizador Mayor
+     */
+    public function autorizadorMayor(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'autorizador_mayor_id');
+    }
 
     /**
      * Get the singleton instance of general settings.

@@ -44,6 +44,21 @@ class EditGeneralSetting extends Page implements HasForms
                             ->default(5),
                     ])
                     ->columns(1),
+
+                \Filament\Forms\Components\Section::make('Configuración de Comprobaciones de Gastos')
+                    ->description('Configura los usuarios y parámetros para el proceso de comprobación de gastos')
+                    ->schema([
+                        \Filament\Forms\Components\Select::make('autorizador_mayor_id')
+                            ->label('Autorizador Mayor')
+                            ->prefixIcon('heroicon-o-user-circle')
+                            ->placeholder('Selecciona un usuario')
+                            ->helperText('Usuario responsable de aprobar comprobaciones que excedan el monto límite estándar')
+                            ->relationship('autorizadorMayor', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->nullable(),
+                    ])
+                    ->columns(1),
             ])
             ->statePath('data');
     }
