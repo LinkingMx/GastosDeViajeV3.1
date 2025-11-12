@@ -318,7 +318,8 @@ class ExpenseVerificationResource extends Resource
                     ->label('Folio')
                     ->searchable()
                     ->sortable()
-                    ->weight('bold'),
+                    ->badge()
+                    ->color('primary'),
 
                 Tables\Columns\TextColumn::make('travelRequest.folio')
                     ->label('Solicitud de Viaje')
