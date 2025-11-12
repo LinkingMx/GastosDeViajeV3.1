@@ -6,6 +6,29 @@ use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin');
 
+// Ruta temporal para previsualizar el email (sin autenticación para pruebas)
+Route::get('/email-preview/travel-request-created', function () {
+    // Crear un objeto de prueba
+    $travelRequest = new \App\Models\TravelRequest();
+    $travelRequest->folio = 'TR-2024-001';
+    $travelRequest->departure_date = now()->addDays(5);
+    $travelRequest->return_date = now()->addDays(10);
+    $travelRequest->destination_city = 'Ciudad de México';
+    $travelRequest->status_display = 'BORRADOR';
+    $travelRequest->created_at = now();
+    
+    // Crear un usuario de prueba
+    $user = new \App\Models\User();
+    $user->name = 'Juan Pérez';
+    $user->email = 'juan.perez@ejemplo.com';
+    
+    $travelRequest->user = $user;
+    
+    $viewUrl = url('/admin/travel-requests/1/view');
+    
+    return view('emails.travel-request-created', compact('travelRequest', 'viewUrl'));
+});
+
 // Protected route for downloading attachments
 Route::middleware(['auth'])->group(function () {
     Route::get('/attachments/{attachment}/download', [AttachmentController::class, 'download'])
