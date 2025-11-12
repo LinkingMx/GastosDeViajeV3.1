@@ -26,10 +26,8 @@ class SendExpenseVerificationSubmittedNotification implements ShouldQueue
      */
     public function handle(ExpenseVerificationSubmittedEvent $event): void
     {
-        // Send email to all Travel Team members
-        $travelTeamMembers = User::whereHas('roles', function ($query) {
-            $query->where('name', 'travel_team');
-        })->get();
+        // Send email to all Travel Team members (using travel_team boolean field)
+        $travelTeamMembers = User::where('travel_team', true)->get();
 
         foreach ($travelTeamMembers as $member) {
             Mail::to($member->email)
