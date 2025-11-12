@@ -909,17 +909,15 @@ class ExpenseVerificationResource extends Resource
                                     $concept = $state['concept'] ?? 'Concepto';
                                     $amount = (float)($state['total_amount'] ?? 0);
                                     $shortConcept = strlen($concept) > 50 ? substr($concept, 0, 50) . '...' : $concept;
-                                    
+
                                     $status = '';
                                     if (!empty($state['expense_detail_id'])) {
                                         $detail = \App\Models\ExpenseDetail::find($state['expense_detail_id']);
-                                        $iconCheck = '<svg class="w-3 h-3 inline text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-                                        $status = $detail ? ' ' . $iconCheck . ' ' . $detail->name : ' ' . $iconCheck . ' Categorizado';
+                                        $status = $detail ? ' ✓ ' . $detail->name : ' ✓ Categorizado';
                                     } else {
-                                        $iconClock = '<svg class="w-3 h-3 inline text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
-                                        $status = ' ' . $iconClock . ' Pendiente';
+                                        $status = ' ⚠ Pendiente de categorizar';
                                     }
-                                    
+
                                     return $shortConcept . ' - $' . number_format($amount, 2) . $status;
                                 })
                                 ->deleteAction(
