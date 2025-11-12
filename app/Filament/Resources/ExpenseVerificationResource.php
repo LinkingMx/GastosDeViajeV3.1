@@ -694,19 +694,31 @@ class ExpenseVerificationResource extends Resource
             // Crear ExpenseReceipts para cada concepto
             $conceptosCreados = 0;
             $montoTotal = 0;
-            
+
             foreach ($conceptos as $concepto) {
                 $descripcion = (string)($concepto['Descripcion'] ?? $concepto['descripcion'] ?? $concepto->Descripcion ?? '');
-                $importe = (string)($concepto['Importe'] ?? $concepto['importe'] ?? $concepto->Importe ?? '0');
-                
-                if ($descripcion && $importe > 0) {
+                $importeBase = floatval($concepto['Importe'] ?? $concepto['importe'] ?? $concepto->Importe ?? '0');
+
+                if ($descripcion && $importeBase > 0) {
+                    // Extraer impuestos trasladados del concepto (CFDI 4.0)
+                    $impuestosTrasladados = 0;
+                    $traslados = $concepto->xpath('.//cfdi:Impuestos/cfdi:Traslados/cfdi:Traslado');
+
+                    foreach ($traslados as $traslado) {
+                        $importeImpuesto = floatval($traslado['Importe'] ?? 0);
+                        $impuestosTrasladados += $importeImpuesto;
+                    }
+
+                    // Total = Base + IVA + otros impuestos trasladados
+                    $totalConIVA = $importeBase + $impuestosTrasladados;
+
                     $receiptData = [
                         'receipt_type' => 'fiscal',
                         'supplier_name' => $nombreEmisor,
                         'supplier_rfc' => $rfcEmisor,
                         'receipt_date' => $fecha ? date('Y-m-d', strtotime($fecha)) : now()->format('Y-m-d'),
-                        'total_amount' => floatval($importe),
-                        'applied_amount' => floatval($importe), // Por defecto aplicar el importe completo
+                        'total_amount' => $totalConIVA,
+                        'applied_amount' => $totalConIVA, // Por defecto aplicar el importe completo con IVA
                         'uuid' => $uuid,
                         'concept' => $descripcion,
                         'expense_detail_id' => null, // Usuario debe categorizar
@@ -715,7 +727,7 @@ class ExpenseVerificationResource extends Resource
 
                     $receipt = $record->fiscalReceipts()->create($receiptData);
                     $conceptosCreados++;
-                    $montoTotal += floatval($importe);
+                    $montoTotal += $totalConIVA;
                 }
             }
 
@@ -741,7 +753,7 @@ class ExpenseVerificationResource extends Resource
 
             \Filament\Notifications\Notification::make()
                 ->title('CFDI cargado exitosamente')
-                ->body("Se crearon {$conceptosCreados} comprobante(s) fiscal(es) del CFDI de {$nombreEmisor} por un total de $" . number_format($montoTotal, 2) . ". Ahora puedes categorizar cada concepto.")
+                ->body("Se crearon {$conceptosCreados} comprobante(s) fiscal(es) del CFDI de {$nombreEmisor} por un total de $" . number_format($montoTotal, 2) . " (incluye IVA). Ahora puedes categorizar cada concepto.")
                 ->success()
                 ->duration(8000)
                 ->send();
@@ -869,10 +881,14 @@ class ExpenseVerificationResource extends Resource
                                                 ->prefix('$')
                                                 ->step(0.01)
                                                 ->minValue(0.01)
+                                                ->maxValue(fn ($get) => floatval($get('total_amount')))
                                                 ->placeholder('0.00')
-                                                ->helperText('Monto específico que se aplica al concepto')
+                                                ->helperText('Monto específico que se aplica al concepto (no puede exceder el Importe CFDI)')
                                                 ->visible(fn ($get) => !empty($get('expense_detail_id')))
-                                                ->live(),
+                                                ->live()
+                                                ->validationMessages([
+                                                    'max' => 'El monto aplicado no puede ser mayor al Importe CFDI',
+                                                ]),
                                                 
                                             Forms\Components\TextInput::make('uuid')
                                                 ->label('UUID CFDI')
