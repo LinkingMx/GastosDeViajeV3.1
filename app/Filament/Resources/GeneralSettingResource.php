@@ -49,18 +49,7 @@ class GeneralSettingResource extends Resource
     public static function getPages(): array
     {
         return [
-            'edit' => Pages\EditGeneralSetting::route('/{record}/edit'),
+            'index' => Pages\EditGeneralSetting::route('/'),
         ];
-    }
-
-    /**
-     * Redirect to edit page when accessing the resource.
-     */
-    public static function getUrl(string $name = 'edit', array $parameters = [], bool $isAbsolute = true, ?string $panel = null, ?\Illuminate\Database\Eloquent\Model $tenant = null): string
-    {
-        // Always use the singleton record ID (1)
-        $parameters['record'] = $parameters['record'] ?? 1;
-
-        return parent::getUrl($name, $parameters, $isAbsolute, $panel, $tenant);
     }
 }

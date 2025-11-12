@@ -30,14 +30,18 @@ class EditGeneralSetting extends EditRecord
     protected function getRedirectUrl(): string
     {
         // Stay on the same page after save
-        return $this->getResource()::getUrl('edit', ['record' => $this->getRecord()]);
+        return $this->getResource()::getUrl('index');
     }
 
     /**
-     * Ensure we always have a record to edit (singleton pattern).
+     * Mount method to load the singleton record.
      */
-    protected function resolveRecord(int | string $key): \Illuminate\Database\Eloquent\Model
+    public function mount(int | string $record = null): void
     {
-        return \App\Models\GeneralSetting::get();
+        $this->record = \App\Models\GeneralSetting::get();
+
+        $this->fillForm();
+
+        $this->previousUrl = url()->previous();
     }
 }
