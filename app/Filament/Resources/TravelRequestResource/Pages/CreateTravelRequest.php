@@ -61,6 +61,7 @@ class CreateTravelRequest extends CreateRecord
                 ->relationship('branch', 'name')
                 ->label('Centro de costos principal')
                 ->required()
+                ->default(fn () => \App\Models\Branch::getDefault()?->id)
                 ->validationMessages([
                     'required' => 'El centro de costos principal es obligatorio.',
                 ])

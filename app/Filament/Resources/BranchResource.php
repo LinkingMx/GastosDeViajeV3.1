@@ -92,6 +92,17 @@ class BranchResource extends Resource
                             ->formatStateUsing(fn ($state) => $state ? strtoupper(str_replace([' ', '-'], '', $state)) : $state)
                             ->dehydrateStateUsing(fn ($state) => $state ? strtoupper(str_replace([' ', '-'], '', $state)) : $state),
                     ]),
+
+                Forms\Components\Section::make('Configuración del Sistema')
+                    ->description('Configura los ajustes predeterminados para esta sucursal')
+                    ->schema([
+                        Forms\Components\Toggle::make('is_default')
+                            ->label('Sucursal Predeterminada')
+                            ->helperText('Si se activa, esta sucursal se seleccionará automáticamente en las nuevas solicitudes de viaje')
+                            ->inline(false)
+                            ->default(false),
+                    ])
+                    ->columns(1),
             ]);
     }
 
@@ -99,6 +110,16 @@ class BranchResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\IconColumn::make('is_default')
+                    ->label('')
+                    ->boolean()
+                    ->trueIcon('heroicon-s-star')
+                    ->falseIcon('')
+                    ->trueColor('warning')
+                    ->alignCenter()
+                    ->width('40px')
+                    ->tooltip(fn ($record) => $record->is_default ? 'Sucursal Predeterminada' : null),
+
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nombre')
                     ->searchable()
@@ -127,6 +148,13 @@ class BranchResource extends Resource
                     ->trueLabel('Con RFC')
                     ->falseLabel('Sin RFC')
                     ->placeholder('Todos'),
+
+                Tables\Filters\TernaryFilter::make('is_default')
+                    ->label('Predeterminada')
+                    ->nullable()
+                    ->trueLabel('Predeterminada')
+                    ->falseLabel('No Predeterminada')
+                    ->placeholder('Todas'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -136,6 +164,7 @@ class BranchResource extends Resource
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
+            ->defaultSort('is_default', 'desc')
             ->defaultSort('name', 'asc');
     }
 

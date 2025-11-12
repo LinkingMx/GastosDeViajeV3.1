@@ -18,6 +18,7 @@ class Branch extends Model
         'name',
         'ceco',
         'tax_id',
+        'is_default',
     ];
 
     /**
@@ -28,6 +29,7 @@ class Branch extends Model
     protected function casts(): array
     {
         return [
+            'is_default' => 'boolean',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
@@ -50,6 +52,16 @@ class Branch extends Model
         static::updating(function ($branch) {
             static::validateTaxId($branch);
             static::validateCeco($branch);
+        });
+
+        // Ensure only one branch can be default
+        static::saving(function ($branch) {
+            if ($branch->is_default) {
+                // Unset all other branches as default
+                static::where('id', '!=', $branch->id)
+                    ->where('is_default', true)
+                    ->update(['is_default' => false]);
+            }
         });
     }
 
@@ -329,5 +341,55 @@ class Branch extends Model
         $lastChar = substr($rfc, -1);
 
         return $lastChar == $expectedDigit || ($expectedDigit == 10 && $lastChar == 'A');
+    }
+
+    /**
+     * Scope to get the default branch.
+     */
+    public function scopeDefault($query)
+    {
+        return $query->where('is_default', true);
+    }
+
+    /**
+     * Scope to get non-default branches.
+     */
+    public function scopeNonDefault($query)
+    {
+        return $query->where('is_default', false);
+    }
+
+    /**
+     * Get the default branch (static method for convenience).
+     */
+    public static function getDefault(): ?self
+    {
+        return static::where('is_default', true)->first();
+    }
+
+    /**
+     * Check if this branch is the default one.
+     */
+    public function isDefault(): bool
+    {
+        return $this->is_default === true;
+    }
+
+    /**
+     * Set this branch as the default one.
+     */
+    public function setAsDefault(): bool
+    {
+        $this->is_default = true;
+        return $this->save();
+    }
+
+    /**
+     * Remove default status from this branch.
+     */
+    public function removeAsDefault(): bool
+    {
+        $this->is_default = false;
+        return $this->save();
     }
 }
