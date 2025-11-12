@@ -42,7 +42,7 @@ class ExpenseVerificationRejected extends Mailable
             markdown: 'emails.expense-verification-rejected',
             with: [
                 'verification' => $this->verification,
-                'url' => route('filament.admin.resources.expense-verifications.view', $this->verification),
+                'url' => route('filament.admin.resources.expense-verifications.edit', $this->verification),
             ],
         );
     }
