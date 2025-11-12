@@ -2,6 +2,13 @@
 
 namespace App\Models;
 
+use App\Events\ExpenseVerificationApprovedEvent;
+use App\Events\ExpenseVerificationClosedEvent;
+use App\Events\ExpenseVerificationEscalatedEvent;
+use App\Events\ExpenseVerificationHighAuthApprovedEvent;
+use App\Events\ExpenseVerificationRejectedEvent;
+use App\Events\ExpenseVerificationRevisionRequestedEvent;
+use App\Events\ExpenseVerificationSubmittedEvent;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -373,6 +380,8 @@ class ExpenseVerification extends Model
             'status' => 'pending_review',
             'submitted_at' => now(),
         ]);
+
+        event(new ExpenseVerificationSubmittedEvent($this));
     }
 
 
@@ -387,6 +396,8 @@ class ExpenseVerification extends Model
             'approved_by' => $reviewer->id,
             'approval_notes' => $notes,
         ]);
+
+        event(new ExpenseVerificationEscalatedEvent($this));
     }
 
     /**
@@ -412,6 +423,8 @@ class ExpenseVerification extends Model
             'approval_notes' => $notes,
         ]);
 
+        event(new ExpenseVerificationHighAuthApprovedEvent($this));
+
         // Check if reimbursement is needed after approval
         if ($this->needsReimbursement()) {
             $this->markForReimbursement();
@@ -432,6 +445,8 @@ class ExpenseVerification extends Model
             'approved_by' => $reviewer->id,
             'approval_notes' => $notes,
         ]);
+
+        event(new ExpenseVerificationRejectedEvent($this));
     }
 
     /**
@@ -445,6 +460,8 @@ class ExpenseVerification extends Model
             'approved_by' => null,
             'approval_notes' => null,
         ]);
+
+        event(new ExpenseVerificationRevisionRequestedEvent($this));
     }
 
     /**
@@ -568,6 +585,8 @@ class ExpenseVerification extends Model
             'closed_at' => now(),
             'closure_notes' => $notes,
         ]);
+
+        event(new ExpenseVerificationClosedEvent($this));
     }
 
     /**
@@ -590,6 +609,8 @@ class ExpenseVerification extends Model
             'approved_by' => $reviewer->id,
             'approval_notes' => $notes,
         ]);
+
+        event(new ExpenseVerificationApprovedEvent($this));
 
         // Check if reimbursement is needed after approval
         if ($this->needsReimbursement()) {
