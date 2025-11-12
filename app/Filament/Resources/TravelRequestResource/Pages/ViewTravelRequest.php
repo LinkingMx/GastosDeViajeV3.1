@@ -129,19 +129,19 @@ class ViewTravelRequest extends ViewRecord
                                         <div class="border-l-4 p-6 rounded-t-lg shadow-lg bg-gray-100 dark:bg-gray-800">
                                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
                                                 <div>
-                                                    <h2 class="text-2xl font-bold dark:text-white">Solicitud de Viaje</h2>
-                                                    <p class="text-blue-100 dark:text-gray-300 mt-1">Resumen completo de la solicitud</p>
+                                                    <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Solicitud de Viaje</h2>
+                                                    <p class="text-gray-600 dark:text-gray-300 mt-1">Resumen completo de la solicitud</p>
                                                 </div>
                                                 <div class="text-center">
-                                                    <div class="bg-amber-100 dark:bg-amber-900 p-4 rounded-lg">
+                                                    <div class="bg-amber-100 dark:bg-amber-900/30 p-4 rounded-lg">
                                                         <div class="text-sm font-medium text-amber-800 dark:text-amber-200 mb-1">Folio</div>
-                                                        <div class="text-xl font-bold text-blue-800 dark:text-blue-200 font-mono tracking-wider">'.$folio.'</div>
-                                                        <div class="text-xs text-blue-600 dark:text-blue-400 mt-1">Estado: '.$record->status_display.'</div>
+                                                        <div class="text-xl font-bold text-gray-900 dark:text-white font-mono tracking-wider">'.$folio.'</div>
+                                                        <div class="text-xs text-gray-600 dark:text-gray-400 mt-1">Estado: '.$record->status_display.'</div>
                                                     </div>
                                                 </div>
                                                 <div class="text-right">
-                                                    <div class="text-3xl font-bold dark:text-white">$'.number_format($grandTotal, 2).'</div>
-                                                    <div class="text-blue-100 dark:text-gray-300 text-sm">Total Estimado</div>
+                                                    <div class="text-3xl font-bold text-gray-900 dark:text-white">$'.number_format($grandTotal, 2).'</div>
+                                                    <div class="text-gray-600 dark:text-gray-300 text-sm">Total Estimado</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -177,26 +177,26 @@ class ViewTravelRequest extends ViewRecord
                                                 </h3>
                                                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                                     <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
-                                                        <div class="text-sm text-emerald-700 dark:text-emerald-300">Origen</div>
-                                                        <div class="font-semibold text-emerald-900 dark:text-emerald-100">'.($record->origin_city ?? 'No especificado').'</div>
-                                                        <div class="text-xs text-emerald-600 dark:text-emerald-400">'.$originCountry.'</div>
+                                                        <div class="text-sm text-gray-600 dark:text-gray-400">Origen</div>
+                                                        <div class="font-semibold text-gray-900 dark:text-white">'.($record->origin_city ?? 'No especificado').'</div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400">'.$originCountry.'</div>
                                                     </div>
                                                     <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
-                                                        <div class="text-sm text-rose-700 dark:text-rose-300">Destino</div>
-                                                        <div class="font-semibold text-rose-900 dark:text-rose-100">'.($record->destination_city ?? 'No especificado').'</div>
-                                                        <div class="text-xs text-rose-600 dark:text-rose-400">'.$destCountry.'</div>
+                                                        <div class="text-sm text-gray-600 dark:text-gray-400">Destino</div>
+                                                        <div class="font-semibold text-gray-900 dark:text-white">'.($record->destination_city ?? 'No especificado').'</div>
+                                                        <div class="text-xs text-gray-500 dark:text-gray-400">'.$destCountry.'</div>
                                                     </div>
                                                     <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
-                                                        <div class="text-sm text-blue-700 dark:text-blue-300">Fecha de Salida</div>
-                                                        <div class="font-semibold text-blue-900 dark:text-blue-100 text-sm">'.$departureDateFormatted.'</div>
+                                                        <div class="text-sm text-gray-600 dark:text-gray-400">Fecha de Salida</div>
+                                                        <div class="font-semibold text-gray-900 dark:text-white text-sm">'.$departureDateFormatted.'</div>
                                                     </div>
                                                     <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
-                                                        <div class="text-sm text-purple-700 dark:text-purple-300">Fecha de Regreso</div>
-                                                        <div class="font-semibold text-purple-900 dark:text-purple-100 text-sm">'.$returnDateFormatted.'</div>
+                                                        <div class="text-sm text-gray-600 dark:text-gray-400">Fecha de Regreso</div>
+                                                        <div class="font-semibold text-gray-900 dark:text-white text-sm">'.$returnDateFormatted.'</div>
                                                     </div>
                                                 </div>
                                                 <div class="mt-4 text-center">
-                                                    <div class="inline-flex items-center px-4 py-2 bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 rounded-full">
+                                                    <div class="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full">
                                                         <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
                                                         </svg>
@@ -209,13 +209,13 @@ class ViewTravelRequest extends ViewRecord
                                             <!-- Notas y Justificación -->
                                             <div class="border-b border-gray-200 dark:border-gray-700 p-6">
                                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                                    <svg class="w-5 h-5 mr-2 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <svg class="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"></path>
                                                     </svg>
                                                     Notas y Justificación del Viaje
                                                 </h3>
                                                 <div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
-                                                    <p class="">'.htmlspecialchars($record->notes, ENT_QUOTES, 'UTF-8').'</p>
+                                                    <p class="text-gray-700 dark:text-gray-300">'.htmlspecialchars($record->notes, ENT_QUOTES, 'UTF-8').'</p>
                                                 </div>
                                             </div>
                                             ' : '').'
@@ -224,7 +224,7 @@ class ViewTravelRequest extends ViewRecord
                                             <!-- Servicios Administrados -->
                                             <div class="border-b border-gray-200 dark:border-gray-700 p-6">
                                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                                    <svg class="w-5 h-5 mr-2 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <svg class="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                                     </svg>
                                                      Servicios Administrados Solicitados
@@ -232,8 +232,8 @@ class ViewTravelRequest extends ViewRecord
                                                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     '.implode('', array_map(function ($service) {
                                     return '<div class="border-2 bg-white dark:bg-gray-700 rounded-lg mb-4 border-b border-gray-200 dark:border-gray-700 p-6">
-                                                        <div class="font-semibold text-orange-900 dark:text-orange-100">'.$service['name'].'</div>
-                                                        <div class="text-sm text-orange-700 dark:text-orange-300 mt-1">'.$service['notes'].'</div>
+                                                        <div class="font-semibold text-gray-900 dark:text-white">'.$service['name'].'</div>
+                                                        <div class="text-sm text-gray-600 dark:text-gray-400 mt-1">'.$service['notes'].'</div>
                                                     </div>';
                                 }, $requestedServices)).'
                                                 </div>
@@ -244,7 +244,7 @@ class ViewTravelRequest extends ViewRecord
                                             <!-- Viáticos Estándar -->
                                             <div class="border-b border-gray-200 dark:border-gray-700 p-6">
                                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                                    <svg class="w-5 h-5 mr-2 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <svg class="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z"></path>
                                                     </svg>
                                                     Viáticos Estándar Aprobados
@@ -317,7 +317,7 @@ class ViewTravelRequest extends ViewRecord
                                             <!-- Gastos Personalizados -->
                                             <div class="border-b border-gray-200 dark:border-gray-700 p-6">
                                                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                                                    <svg class="w-5 h-5 mr-2 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                                    <svg class="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                                                         <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"></path>
                                                     </svg>
                                                     Gastos Personalizados
@@ -335,7 +335,7 @@ class ViewTravelRequest extends ViewRecord
                                                             '.implode('', array_map(function ($expense) {
                                     return '<tr class="hover:bg-gray-50 dark:hover:bg-gray-700">
                                                                         <td class="px-4 py-4 font-medium text-gray-900 dark:text-white">'.($expense['concept'] ?? 'Sin concepto').'</td>
-                                                                        <td class="px-4 py-4 text-sm font-semibold text-red-600 dark:text-red-400">$'.number_format(floatval($expense['amount'] ?? 0), 2).'</td>
+                                                                        <td class="px-4 py-4 text-sm font-semibold text-gray-900 dark:text-white">$'.number_format(floatval($expense['amount'] ?? 0), 2).'</td>
                                                                         <td class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400">'.($expense['justification'] ?? 'Sin justificación').'</td>
                                                                     </tr>';
                                 }, $customExpensesData)).'
@@ -343,7 +343,7 @@ class ViewTravelRequest extends ViewRecord
                                                         <tfoot class="bg-gray-50 dark:bg-gray-700">
                                                             <tr>
                                                                 <td class="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white text-right">Subtotal Gastos Personalizados:</td>
-                                                                <td class="px-4 py-3 text-sm font-bold text-red-600 dark:text-red-400">$'.number_format($customExpensesTotal, 2).'</td>
+                                                                <td class="px-4 py-3 text-sm font-bold text-gray-900 dark:text-white">$'.number_format($customExpensesTotal, 2).'</td>
                                                                 <td></td>
                                                             </tr>
                                                         </tfoot>
@@ -354,15 +354,15 @@ class ViewTravelRequest extends ViewRecord
 
                                             <!-- Resumen Final -->
                                             <div class="p-6">
-                                                <div class="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 border border-green-200 dark:border-green-800 p-6 rounded-lg">
+                                                <div class="bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 border border-gray-200 dark:border-gray-600 p-6 rounded-lg">
                                                     <h3 class="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Solicitud de Anticipo de gasto</h3>
                                                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                                         <div class="text-center">
-                                                            <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400">$'.number_format($perDiemTotal, 2).'</div>
+                                                            <div class="text-2xl font-bold text-gray-900 dark:text-white">$'.number_format($perDiemTotal, 2).'</div>
                                                             <div class="text-sm text-gray-600 dark:text-gray-400">Viáticos Estándar</div>
                                                         </div>
                                                         <div class="text-center">
-                                                            <div class="text-2xl font-bold text-red-600 dark:text-red-400">$'.number_format($customExpensesTotal, 2).'</div>
+                                                            <div class="text-2xl font-bold text-gray-900 dark:text-white">$'.number_format($customExpensesTotal, 2).'</div>
                                                             <div class="text-sm text-gray-600 dark:text-gray-400">Gastos Personalizados</div>
                                                         </div>
                                                         <div class="text-center border-l border-gray-300 dark:border-gray-600">
@@ -435,8 +435,8 @@ class ViewTravelRequest extends ViewRecord
                                                         </div>
                                                     </div>
                                                     <div class="ml-4">
-                                                        <a href="'.route('attachments.download', $attachment).'" 
-                                                           class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200">
+                                                        <a href="'.route('attachments.download', $attachment).'"
+                                                           class="inline-flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 dark:bg-primary-600 dark:hover:bg-primary-700 text-white dark:text-white text-sm font-medium rounded-lg transition-colors duration-200">
                                                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path>
                                                             </svg>
@@ -516,29 +516,29 @@ class ViewTravelRequest extends ViewRecord
 
                                 // Fecha de creación (siempre existe)
                                 $html .= '
-                                <div class="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg">
+                                <div class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-4 rounded-lg">
                                     <div class="flex items-center mb-2">
-                                        <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                        <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd"></path>
                                         </svg>
-                                        <h4 class="text-sm font-semibold text-blue-800 dark:text-blue-200">Creada</h4>
+                                        <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Creada</h4>
                                     </div>
-                                    <div class="text-sm font-medium text-blue-900 dark:text-blue-100">'.$record->created_at->format('d/m/Y').'</div>
-                                    <div class="text-xs text-blue-600 dark:text-blue-400">'.$record->created_at->format('H:i').'</div>
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">'.$record->created_at->format('d/m/Y').'</div>
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">'.$record->created_at->format('H:i').'</div>
                                 </div>';
 
                                 // Fecha de envío (submitted_at)
                                 if ($record->submitted_at) {
                                     $html .= '
-                                    <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 p-4 rounded-lg">
+                                    <div class="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-4 rounded-lg">
                                         <div class="flex items-center mb-2">
-                                            <svg class="w-5 h-5 text-indigo-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg class="w-5 h-5 text-gray-600 dark:text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                                 <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z"></path>
                                             </svg>
-                                            <h4 class="text-sm font-semibold text-indigo-800 dark:text-indigo-200">Enviada</h4>
+                                            <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Enviada</h4>
                                         </div>
-                                        <div class="text-sm font-medium text-indigo-900 dark:text-indigo-100">'.$record->submitted_at->format('d/m/Y').'</div>
-                                        <div class="text-xs text-indigo-600 dark:text-indigo-400">'.$record->submitted_at->format('H:i').'</div>
+                                        <div class="text-sm font-medium text-gray-900 dark:text-white">'.$record->submitted_at->format('d/m/Y').'</div>
+                                        <div class="text-xs text-gray-600 dark:text-gray-400">'.$record->submitted_at->format('H:i').'</div>
                                     </div>';
                                 }
 
