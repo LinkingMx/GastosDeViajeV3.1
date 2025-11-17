@@ -62,6 +62,8 @@ class CreateTravelRequest extends CreateRecord
                 ->label('Centro de costos principal')
                 ->required()
                 ->default(fn () => \App\Models\Branch::getDefault()?->id)
+                ->disabled()
+                ->dehydrated()
                 ->validationMessages([
                     'required' => 'El centro de costos principal es obligatorio.',
                 ])

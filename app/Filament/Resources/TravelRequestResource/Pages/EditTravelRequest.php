@@ -121,7 +121,8 @@ class EditTravelRequest extends EditRecord
                 ->validationMessages([
                     'required' => 'El centro de costos principal es obligatorio.',
                 ])
-                ->disabled($isDisabled)
+                ->disabled()
+                ->dehydrated()
                 ->columnSpanFull(),
 
             // Campo oculto para mantener la funcionalidad del tipo de viaje
