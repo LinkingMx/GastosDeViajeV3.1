@@ -755,16 +755,16 @@ class EditTravelRequest extends EditRecord
                                         $notes = $get("per_diem_data.{$perDiem->id}.notes") ?: 'Sin notas';
 
                                         $rows .= "
-                                            <div class='mb-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
-                                                <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2'>
-                                                    <div class='flex-1'>
-                                                        <div class='font-semibold text-gray-900 dark:text-white'>{$name}</div>
-                                                        ".($concept ? "<div class='text-sm text-gray-500 dark:text-gray-400'>({$concept})</div>" : '')."
-                                                        <div class='text-xs text-gray-500 dark:text-gray-400 mt-1'>{$notes}</div>
+                                            <div class='mb-4 p-5 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow'>
+                                                <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4'>
+                                                    <div class='flex-1 space-y-2'>
+                                                        <div class='font-bold text-lg text-gray-900 dark:text-white'>{$name}</div>
+                                                        ".($concept ? "<div class='text-sm text-gray-600 dark:text-gray-400 font-medium'>({$concept})</div>" : '')."
+                                                        <div class='text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700'>{$notes}</div>
                                                     </div>
-                                                    <div class='flex flex-row sm:flex-col gap-4 sm:gap-1 sm:text-right'>
-                                                        <div class='text-sm text-gray-600 dark:text-gray-400'>$".number_format($perDiem->amount, 2)." × {$totalDays} días</div>
-                                                        <div class='text-lg font-bold text-success-600 dark:text-success-400'>$".number_format($amount, 2)."</div>
+                                                    <div class='flex flex-row sm:flex-col gap-4 sm:gap-2 sm:text-right sm:min-w-[180px] items-center sm:items-end'>
+                                                        <div class='text-sm font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full'>$".number_format($perDiem->amount, 2)." × {$totalDays} días</div>
+                                                        <div class='text-2xl font-bold text-success-600 dark:text-success-400'>$".number_format($amount, 2)."</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -774,10 +774,10 @@ class EditTravelRequest extends EditRecord
 
                                 if ($rows) {
                                     $rows .= "
-                                        <div class='mt-4 p-4 bg-success-50 dark:bg-success-900/20 rounded-lg border-2 border-success-200 dark:border-success-800'>
-                                            <div class='flex justify-between items-center'>
-                                                <span class='font-semibold text-gray-900 dark:text-white'>Subtotal Viáticos:</span>
-                                                <span class='text-xl font-bold text-success-600 dark:text-success-400'>$".number_format($total, 2)."</span>
+                                        <div class='mt-6 p-6 bg-gradient-to-r from-success-50 to-success-100 dark:from-success-900/30 dark:to-success-900/20 rounded-xl border-2 border-success-300 dark:border-success-700 shadow-md'>
+                                            <div class='flex flex-col sm:flex-row justify-between items-center gap-3'>
+                                                <span class='text-lg font-bold text-gray-900 dark:text-white'>Subtotal Viáticos:</span>
+                                                <span class='text-3xl font-bold text-success-600 dark:text-success-400'>$".number_format($total, 2)."</span>
                                             </div>
                                         </div>
                                     ";
@@ -835,14 +835,14 @@ class EditTravelRequest extends EditRecord
                                         $justification = $expense['justification'] ?? 'Sin justificación';
 
                                         $rows .= "
-                                            <div class='mb-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
-                                                <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2'>
-                                                    <div class='flex-1'>
-                                                        <div class='font-semibold text-gray-900 dark:text-white'>{$concept}</div>
-                                                        <div class='text-sm text-gray-600 dark:text-gray-400 mt-1'>{$justification}</div>
+                                            <div class='mb-4 p-5 bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow'>
+                                                <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4'>
+                                                    <div class='flex-1 space-y-2'>
+                                                        <div class='font-bold text-lg text-gray-900 dark:text-white'>{$concept}</div>
+                                                        <div class='text-sm text-gray-500 dark:text-gray-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700'>{$justification}</div>
                                                     </div>
-                                                    <div class='text-lg font-bold text-danger-600 dark:text-danger-400 sm:text-right'>
-                                                        $".number_format($amount, 2)."
+                                                    <div class='flex items-center sm:min-w-[180px] sm:justify-end'>
+                                                        <div class='text-2xl font-bold text-danger-600 dark:text-danger-400'>$".number_format($amount, 2)."</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -852,10 +852,10 @@ class EditTravelRequest extends EditRecord
 
                                 if ($rows) {
                                     $rows .= "
-                                        <div class='mt-4 p-4 bg-danger-50 dark:bg-danger-900/20 rounded-lg border-2 border-danger-200 dark:border-danger-800'>
-                                            <div class='flex justify-between items-center'>
-                                                <span class='font-semibold text-gray-900 dark:text-white'>Subtotal Gastos Personalizados:</span>
-                                                <span class='text-xl font-bold text-danger-600 dark:text-danger-400'>$".number_format($total, 2)."</span>
+                                        <div class='mt-6 p-6 bg-gradient-to-r from-danger-50 to-danger-100 dark:from-danger-900/30 dark:to-danger-900/20 rounded-xl border-2 border-danger-300 dark:border-danger-700 shadow-md'>
+                                            <div class='flex flex-col sm:flex-row justify-between items-center gap-3'>
+                                                <span class='text-lg font-bold text-gray-900 dark:text-white'>Subtotal Gastos Personalizados:</span>
+                                                <span class='text-3xl font-bold text-danger-600 dark:text-danger-400'>$".number_format($total, 2)."</span>
                                             </div>
                                         </div>
                                     ";
