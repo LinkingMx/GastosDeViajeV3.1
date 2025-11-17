@@ -39,10 +39,10 @@ class ExpenseVerificationHighAuthApproved extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.expense-verification-high-auth-approved',
+            view: 'emails.expense-verification-high-auth-approved',
             with: [
                 'verification' => $this->verification,
-                'url' => route('filament.admin.resources.expense-verifications.edit', $this->verification),
+                'url' => route('filament.admin.resources.expense-verifications.view', $this->verification),
             ],
         );
     }

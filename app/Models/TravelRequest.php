@@ -340,6 +340,20 @@ class TravelRequest extends Model
             'comment' => $comment,
             'type' => 'rejection',
         ]);
+
+        // Obtener el nombre del autorizador que rechaza
+        $rejectorName = auth()->user()->name ?? 'Autorizador';
+
+        // Enviar correo al solicitante notificando el rechazo
+        \Illuminate\Support\Facades\Mail::to($this->user->email)
+            ->send(new \App\Mail\TravelRequestRejectedMail($this, $comment, $rejectorName));
+
+        // Crear notificación de campanita al solicitante
+        $this->user->notify(new \App\Notifications\TravelRequestNotification(
+            '❌ Solicitud Rechazada',
+            "Tu solicitud de viaje {$this->folio} ha sido rechazada por {$rejectorName}.",
+            $this
+        ));
     }
 
     /**

@@ -39,10 +39,10 @@ class ExpenseVerificationClosed extends Mailable
     public function content(): Content
     {
         return new Content(
-            markdown: 'emails.expense-verification-closed',
+            view: 'emails.expense-verification-closed',
             with: [
                 'verification' => $this->verification,
-                'url' => route('filament.admin.resources.expense-verifications.edit', $this->verification),
+                'url' => route('filament.admin.resources.expense-verifications.view', $this->verification),
             ],
         );
     }

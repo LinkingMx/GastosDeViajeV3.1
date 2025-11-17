@@ -6,144 +6,213 @@
     <title>{{ config('app.name') }} - Solicitud Pendiente de Autorización</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f8fafc;
-            color: #374151;
+            background-color: #ffffff;
+            color: #000000;
             line-height: 1.6;
         }
         .container {
             max-width: 600px;
-            margin: 0 auto;
+            margin: 40px auto;
             background-color: #ffffff;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e5e5e5;
+            border-radius: 0;
         }
         .header {
-            background: linear-gradient(135deg, #857151 0%, #6e5d48 100%);
-            color: white;
+            background: #ffffff;
             padding: 40px 30px;
             text-align: center;
-            border-radius: 8px 8px 0 0;
+            border-bottom: 1px solid #e5e5e5;
         }
         .header img {
-            max-height: 60px;
+            max-height: 40px;
             width: auto;
+            min-width: 150px;
             margin-bottom: 20px;
-            filter: brightness(0) invert(1);
         }
         .header h1 {
             margin: 0;
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-        .header p {
-            margin: 0;
-            font-size: 16px;
-            opacity: 0.9;
+            font-size: 24px;
+            font-weight: 300;
+            color: #000000;
+            letter-spacing: 0.5px;
         }
         .content {
             padding: 40px 30px;
         }
         .greeting {
-            font-size: 18px;
-            color: #1f2937;
+            font-size: 16px;
+            color: #000000;
             margin-bottom: 20px;
+            font-weight: 300;
+        }
+        .alert-box {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 16px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .alert-icon {
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        .alert-content {
+            display: inline-block;
+            vertical-align: middle;
+            font-size: 15px;
+            color: #92400e;
+            font-weight: 500;
         }
         .message {
-            font-size: 16px;
+            font-size: 14px;
             margin-bottom: 30px;
-            color: #4b5563;
+            color: #000000;
+            font-weight: 300;
+            line-height: 1.8;
         }
         .details-box {
-            background-color: #f8fafc;
-            border: 1px solid #e5e7eb;
+            background-color: #ffffff;
+            border: 1px solid #e5e5e5;
             border-radius: 8px;
             padding: 24px;
-            margin: 25px 0;
+            margin: 30px 0;
         }
         .details-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #e5e7eb;
-            padding-bottom: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f0f0f0;
         }
         .details-row:last-child {
             border-bottom: none;
             margin-bottom: 0;
+            padding-bottom: 0;
         }
         .details-label {
-            font-weight: 600;
-            color: #374151;
-            min-width: 140px;
+            font-weight: 300;
+            color: #000000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .details-value {
-            color: #6b7280;
+            color: #000000;
             text-align: right;
+            font-weight: 400;
+        }
+        .icon {
+            width: 16px;
+            height: 16px;
+            display: inline-block;
+            vertical-align: middle;
         }
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
+            border: 1px solid #f59e0b;
+            font-size: 11px;
+            font-weight: 500;
             text-transform: uppercase;
+            letter-spacing: 0.5px;
             background-color: #fef3c7;
             color: #92400e;
         }
+        .purpose-box {
+            background-color: #f9fafb;
+            border: 1px solid #e5e7eb;
+            padding: 16px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .purpose-label {
+            font-weight: 500;
+            color: #000000;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .purpose-content {
+            color: #000000;
+            font-size: 14px;
+            line-height: 1.6;
+        }
         .cta-button {
             display: inline-block;
-            background: linear-gradient(135deg, #857151 0%, #6e5d48 100%);
-            color: white;
-            padding: 16px 32px;
+            background: #897053;
+            color: #ffffff;
+            padding: 14px 28px;
             text-decoration: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 16px;
+            font-weight: 400;
+            font-size: 14px;
             margin: 20px 0;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            letter-spacing: 0.5px;
             transition: all 0.3s ease;
+            border: none;
+            border-radius: 8px;
         }
         .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            background: #6d5940;
+            transform: translateY(-1px);
+        }
+        .options-section {
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+        }
+        .options-title {
+            font-weight: 500;
+            color: #000000;
+            margin-bottom: 16px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .options-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .options-list li {
+            margin-bottom: 12px;
+            padding-left: 24px;
+            position: relative;
+            font-size: 14px;
+            color: #000000;
+        }
+        .options-list li:before {
+            content: "•";
+            position: absolute;
+            left: 8px;
+            font-weight: bold;
+            color: #897053;
+        }
+        .options-list li strong {
+            font-weight: 500;
         }
         .footer {
-            background-color: #f9fafb;
+            background-color: #ffffff;
             padding: 30px;
             text-align: center;
-            border-top: 1px solid #e5e7eb;
-            color: #6b7280;
-            font-size: 14px;
+            border-top: 1px solid #e5e5e5;
+            color: #666666;
+            font-size: 12px;
+            font-weight: 300;
         }
         .footer p {
             margin: 8px 0;
         }
-        .divider {
-            height: 1px;
-            background-color: #e5e7eb;
-            margin: 30px 0;
-        }
-        .alert-box {
-            background-color: #fef3c7;
-            border: 1px solid #fcd34d;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .alert-box p {
-            margin: 0;
-            color: #92400e;
-            font-weight: 500;
-        }
         @media (max-width: 600px) {
             .container {
-                margin: 0 10px;
+                margin: 20px 10px;
             }
             .header, .content {
-                padding: 20px;
+                padding: 30px 20px;
             }
             .details-row {
                 flex-direction: column;
@@ -151,7 +220,7 @@
             }
             .details-value {
                 text-align: left;
-                margin-top: 4px;
+                margin-top: 8px;
             }
         }
     </style>
@@ -160,19 +229,19 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz4KPCEtLSBHZW5lcmF0b3I6IEFkb2JlIElsbHVzdHJhdG9yIDI2LjAuMiwgU1ZHIEV4cG9ydCBQbHVnLUluIC4gU1ZHIFZlcnNpb246IDYuMDAgQnVpbGQgMCkgIC0tPgo8c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IgoJIHZpZXdCb3g9IjAgMCA0MzkuMSAxMDYuNiIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgNDM5LjEgMTA2LjY7IiB4bWw6c3BhY2U9InByZXNlcnZlIj4KPHN0eWxlIHR5cGU9InRleHQvY3NzIj4KCS5zdDB7ZmlsbDojODk3MDUzO30KPC9zdHlsZT4KPGc+Cgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNNDM0LjUsMTVoMC42bDEsMS42aDAuN2wtMS0xLjdjMC41LTAuMSwwLjgtMC42LDAuOC0xLjFjMC0wLjctMC41LTEuMi0xLjItMS4yaC0xLjV2NGgwLjZWMTV6IE00MzQuNSwxMy4xCgkJaDAuOWMwLjMsMCwwLjYsMC4zLDAuNiwwLjdzLTAuMywwLjctMC42LDAuN2gtMC45VjEzLjF6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNNDM1LjIsMTguNmMyLjIsMCwzLjktMS44LDMuOS0zLjlzLTEuOC0zLjktMy45LTMuOWMtMi4yLDAtMy45LDEuOC0zLjksMy45UzQzMywxOC42LDQzNS4yLDE4LjYgTTQzNS4yLDExLjIKCQljMS45LDAsMy40LDEuNSwzLjQsMy40cy0xLjUsMy40LTMuNCwzLjRzLTMuNC0xLjUtMy40LTMuNEM0MzEuOCwxMi43LDQzMy4zLDExLjIsNDM1LjIsMTEuMiIvPgoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTEyNC45LDU3LjRjMC0yNy4yLTEzLjYtNDkuMi0zMC4zLTQ5LjJzLTMwLjMsMjItMzAuMyw0OS4yczEzLjYsNDkuMiwzMC4zLDQ5LjIKCQlDMTExLjMsMTA2LjYsMTI0LjksODQuNiwxMjQuOSw1Ny40IE0xMDEuNiwxMDMuMWMtOC4yLDEuMy0xNy45LTE4LjItMjEuOC00My40Yy0zLjktMjUuMi0wLjQtNDYuNyw3LjctNDcuOQoJCWM4LjItMS4zLDE3LjksMTguMiwyMS44LDQzLjRDMTEzLjMsODAuNCwxMDkuOCwxMDEuOCwxMDEuNiwxMDMuMSIvPgoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTQwOC4yLDguMmMtMTYuNywwLTMwLjMsMjItMzAuMyw0OS4yczEzLjYsNDkuMiwzMC4zLDQ5LjJjMTYuNywwLDMwLjMtMjIsMzAuMy00OS4yUzQyNC45LDguMiw0MDguMiw4LjIKCQkgTTQxNS4yLDEwMy4xYy04LjIsMS4zLTE3LjktMTguMi0yMS44LTQzLjRTMzkzLDEzLDQwMS4xLDExLjhjOC4yLTEuMywxNy45LDE4LjIsMjEuOCw0My40QzQyNi44LDgwLjQsNDIzLjMsMTAxLjgsNDE1LjIsMTAzLjEiLz4KCTxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik01OS4xLDkyLjNjMC4xLTAuMiwwLTAuNC0wLjEtMC42bC0xLTAuOGMtMC4yLTAuMi0wLjUtMC4yLTAuNiwwYy0xLjUsMS40LTguNCw3LTE4LjQtMC40CgkJQzI1LDgwLjIsMjEuNCw1OC4xLDIxLjQsNTguMWMtNC42LTI2LjItMC42LTQyLjgsOC44LTQ1LjJjMy43LTAuOSw3LjUsMiw3LjUsMmMyLjQsMi4xLDQuNyw0LjYsNi42LDcuMmMyLjgsMy44LDUuMSw3LjksNy4xLDExLjgKCQlsMS45LDMuOGMwLjEsMC4yLDAuMywwLjMsMC42LDAuMmwxLjgtMC43YzAuMi0wLjEsMC4zLTAuMiwwLjMtMC40bC0xLjEtMjQuNGMwLTAuNi0wLjItMS43LTEtMS45QzUwLjYsOS44LDQxLDguNCw0MSw4LjQKCQljLTExLTEtMjAuMiwyLjYtMjcsMTEuNWMwLDAtMTIuMiwxNS40LTEwLjksMzUuOEM0LjksODMuOSwxOS4yLDEwNywzOSwxMDYuOEM1MS40LDEwNi43LDU4LDk0LjQsNTkuMSw5Mi4zIi8+Cgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMzMyLjgsNy41YzAuMSwwLjMsMC41LDAuNCwwLjcsMC4zYzEuNy0wLjgsMy4yLTAuOCw1LjcsMEwzNDQsOWM0LjMsMSw2LjUtMS43LDcuMi00LjcKCQljMC4xLTAuMi0wLjEtMC41LTAuMy0wLjZsLTEtMC41Yy0wLjItMC4xLTAuNS0wLjEtMC42LDAuMWMtMS43LDEuNC0zLjMsMS44LTYsMWMtMS44LTAuNi0zLjctMS4xLTUuNS0xLjZjMCwwLTMuNi0wLjktNS43LDMKCQljLTAuMSwwLjItMC4xLDAuNCwwLDAuNUwzMzIuOCw3LjV6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMjQwLjEsMzcuOGwwLjktMC41YzAuNC0wLjIsMC42LTAuNiwwLjYtMWMtMC41LTguMS0wLjgtMTYuMy0xLjMtMjQuNWMtMC4xLTEuNS0xLjMtMi42LTIuOC0yLjZoLTI0LjFoLTI0LjEKCQljLTEuNSwwLTIuNywxLjEtMi44LDIuNmMtMC41LDguMi0wLjgsMTYuNS0xLjMsMjQuN2MwLDAuNCwwLjIsMC44LDAuNiwxbDEsMC41YzAuNSwwLjMsMS4xLDAuMSwxLjQtMC41bDExLjUtMjMuNwoJCWMwLjEtMC4xLDAuMi0wLjIsMC4yLTAuM2MxLjYtMi43LDUuMy0wLjcsNS43LDEuOGMwLjIsMS4zLDAuMywyLjYsMC4zLDMuOWMwLDIwLjgsMC4xLDI1LjcsMCw0Ni41YzAsNS4xLTAuNSwyNi4xLTAuOSwzMS4yCgkJYy0wLjMsMi44LTEuMSw0LjUtMy40LDUuOWMtMC41LDAuMy0wLjYsMC45LTAuNCwxLjRsMC42LDEuMWMwLjIsMC40LDAuNiwwLjYsMSwwLjZoMTAuN2gxMC43YzAuNCwwLDAuOC0wLjIsMS0wLjZsMC42LTEuMQoJCWMwLjItMC41LDAuMS0xLjEtMC40LTEuNGMtMi4zLTEuNS0zLjEtMy4xLTMuNC01LjljLTAuNS01LjEtMC45LTI2LjEtMC45LTMxLjJjLTAuMS0yMC44LDAtMjUuNywwLTQ2LjVjMC0xLjMsMC4xLTIuNiwwLjMtMy45CgkJYzAuMy0yLjUsNC4xLTQuNSw1LjctMS44YzAuMSwwLjEsMC4yLDAuMiwwLjIsMC4zbDExLjUsMjMuNUMyMzguOSwzNy45LDIzOS42LDM4LjEsMjQwLjEsMzcuOCIvPgoJPHBhdGggY2xhc3M9InN0MCIgZD0iTTI2OS4zLDYxLjZjMC0yLjMsMC4zLTIuNSwyLj43LTIuNWM1LjQsMC4xLDEwLjUsMSAxNC41LDUuMmMyLjEsMi4yLDMuMyw0LjQsNC40LDcuMgoJCWMwLjEsMC4zLDAuMywwLjUsMC41LDAuN2wxLDAuNWMwLjUsMC4yLDAuOC0wLjQsMC44LTAuOFY1Ny42bDAsMFY0My4zYzAtMC40LTAuMy0xLTAuOC0wLjhsLTEsMC41Yy0wLjIsMC4yLTAuNCwwLjQtMC41LDAuNwoJCWMtMSwyLjgtMi4yLDUtNC40LDcuMmMtNCw0LjEtOSw1LjEtMTQuNSw1LjJjLTIuMywwLTIuNy0wLjItMi43LTIuNWMwLTEuNCwwLTIuNywwLTQuMWMwLTcuNSwwLTE1LjcsMC4yLTIzLjMKCQljMCwwLTAuMS0xMi42LDcuNy0xNC4xYzEwLjQtMS45LDE0LjMsOSwxNC4zLDljMy4yLDQuNiw1LjEsMTEuMSw3LDE2LjRjMC4yLDAuNCwwLjcsMC42LDEuMSwwLjRsMS4zLTAuN2MwLjMtMC4xLDAuNS0wLjQsMC40LTAuOAoJCWMtMC42LTguMy0xLjEtMTYuNi0xLjctMjQuOWMtMC4xLTEuMy0xLjItMi40LTIuNS0yLjRoLTQ0Yy0wLjMsMC0wLjYsMC4yLTAuNywwLjRsLTEsMS45Yy0wLjEsMC4yLTAuMSwwLjUsMCwwLjgKCQljMS4zLDIuMSwxLjgsNC41LDIuMSw3LjFjMC4zLDMuMiwwLjYsNi40LDAuNiw5LjZjMC4xLDE2LDAuMSwzMi4zLDAuMSw0OC4zYy0wLjEsNC4xLTAuMywxMC43LTAuNCwxNC44Yy0wLjIsNC44LTAuNSw3LjctMi42LDEwLjcKCQljLTAuMiwwLjItMC4yLDAuNi0wLjEsMC44bDAuOSwxLjdjMC4xLDAuMywwLjQsMC40LDAuNywwLjRoNDQuNWMxLjMsMCwyLjMtMC45LDIuNS0yLjJjMS03LjQsMi0xNC45LDIuOS0yMi4zCgkJYzAtMC4zLTAuMS0wLjYtMC40LTAuOGwtMS40LTAuN2MtMC40LTAuMi0wLjksMC0xLjEsMC40Yy0xLjYsMy40LTMuMiw4LjEtNSwxMS4zYy0yLjQsNC40LTUuOCw4LjQtMTAuNywxMC4zCgkJYy03LjEsMi44LTEzLjksMS4zLTE0LjItNy43TDI2OS4zLDYxLjZ6Ii8+Cgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMTcyLjcsNjkuNGMtNi4yLTkuOS0xMi43LTE5LjYtMTkuMS0yOS41Yy0zLTQuNi01LjctOS41LTYuOC0xNWMtMC43LTMuMi0wLjgtNi40LDAuNy05LjUKCQljMi4xLTQuMSw2LjMtNSw5LjgtMmMwLDAsNy42LDUuNiwxMy43LDI0LjNjMC4xLDAuNCwwLjcsMC42LDEuMSwwLjRsMS4zLTAuN2MwLjMtMC4xLDAuNC0wLjQsMC40LTAuOGwtMS0yNGMwLTAuNy0wLjUtMS44LTEuNi0yLjEKCQljLTYuNS0xLjQtMTIuNC0zLjEtMTkuNS0yLjFDMTQwLjksMTAsMTMzLjQsMTguMiwxMzMsMjljLTAuMyw2LjUsMiwxMi4yLDUuNCwxNy41YzUuOCw5LDExLjcsMTcuOSwxNy41LDI2LjgKCQljMi4zLDMuNiw0LjUsNy4yLDYuNCwxMWMxLjgsMy42LDIuOCw3LjUsMi4xLDExLjdjLTEuMiw2LjctNy43LDkuNS0xMy4xLDUuM2MtMi4zLTEuOC00LjMtNC4yLTYuMS02LjZjLTQuMy01LjctNi45LTEzLjUtOC44LTE4LjgKCQljLTAuMS0wLjQtMC41LTAuNi0wLjktMC41Yy0wLjMsMC0wLjYsMC4xLTAuOSwwLjFjLTAuNCwwLTAuNywwLjQtMC43LDAuOGwwLjksMjMuM2MwLjEsMi4zLDAuOSwzLjQsMyw0LjJjOS40LDMuNSwxOSwzLjgsMjguNCwwLjUKCQljMTAuOS0zLjgsMTUuMy0xMywxMS43LTI0QzE3Ni44LDc2LjUsMTc0LjksNzIuOCwxNzIuNyw2OS40Ii8+Cgk8cGF0aCBjbGFzcz0ic3QwIiBkPSJNMzcwLjUsOS44Yy0wLjEtMC4zLTAuNC0wLjQtMC43LTAuNGgtMTAuOWMtMC4zLDAtMC42LDAuMi0wLjcsMC40bC0wLjgsMS43Yy0wLjIsMC4zLTAuMSwwLjcsMC4yLDEKCQljMS44LDEuNSwzLjgsMy43LDQuMiw2LjFjMCwwLDAuMywzLjgsMC4zLDguNnYzOS45YzAsMC44LTEuMSwxLjEtMS41LDAuNGwtMzMuOC01Ni44Yy0wLjQtMC44LTEuMi0xLjQtMi4xLTEuNGgtMTAuOQoJCWMtMC40LDAtMC43LDAuMi0wLjksMC41bC0wLjcsMS4zYy0wLjIsMC40LTAuMSwwLjksMC4yLDEuMmMxLjcsMS41LDIuNSwyLjIsMi44LDQuOWMwLjgsNy4xLDEsMTYuNCwxLDE2LjRsMC4yLDE0LjJsMC4zLDQwLjEKCQljLTAuMSwyLjUtMC4xLDYuNi0wLjIsOC42Yy0wLjMsMy4yLTIuNCw0LjItNC41LDYuMWMtMC4zLDAuMy0wLjMsMC43LTAuMiwxbDAuOSwxLjdjMC4xLDAuMywwLjQsMC40LDAuNywwLjRoMTAuOQoJCWMwLjMsMCwwLjYtMC4yLDAuNy0wLjRsMC44LTEuN2MwLjItMC4zLDAuMS0wLjctMC4yLTFjLTEuOC0xLjUtMy44LTMuNy00LjItNi4xYzAsMC0wLjMtMy44LTAuMy04LjZsLTAuNS01My4yCgkJYzAtMC45LDEuMi0xLjMsMS43LTAuNWw0Myw3Mi4zYzAuMSwwLjIsMC4zLDAuMywwLjUsMC4zaDAuN2MwLjMsMCwwLjUtMC4yLDAuNS0wLjVsLTAuNi03OS4xYzAuMS0yLjUsMC4xLTYuNiwwLjItOC42CgkJYzAuMy0zLjIsMi40LTQuMiw0LjUtNi4xYzAuMy0wLjMsMC4zLTAuNywwLjItMUwzNzAuNSw5Ljh6Ii8+CjwvZz4KPC9zdmc+Cg==" alt="{{ config('app.name') }} Logo">
-            <h1>{{ config('app.name') }}</h1>
-            <p>Sistema de Gestión de Viajes</p>
+            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMjAwIDYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDx0ZXh0IHg9IjEwMCIgeT0iMzgiIGZvbnQtZmFtaWx5PSJHYXJhbW9uZCwgVHJhamFuLCBUaW1lcyBOZXcgUm9tYW4sIHNlcmlmIiBmb250LXNpemU9IjMyIiBmb250LXdlaWdodD0iNTAwIiBmaWxsPSIjODk3MDUzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMiI+Q09TVEVOTzwvdGV4dD4KPC9zdmc+" alt="COSTENO Logo">
+            <h1>Solicitud Pendiente de Autorización</h1>
         </div>
 
         <!-- Content -->
         <div class="content">
             <div class="greeting">
-                ¡Hola {{ $travelRequest->actual_authorizer->name }}! 👋
+                ¡Hola {{ $authorizer->name }}! 👋
             </div>
 
             <div class="alert-box">
-                <p>⚠️ <strong>Tienes una solicitud de viaje pendiente de autorización</strong></p>
+                <span class="alert-icon">⚠️</span>
+                <span class="alert-content">Tienes una solicitud de viaje pendiente de autorización</span>
             </div>
 
             <div class="message">
@@ -181,69 +250,122 @@
 
             <div class="details-box">
                 <div class="details-row">
-                    <span class="details-label">📋 Folio:</span>
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 11H15M9 15H15M17 3H7C5.89543 3 5 3.89543 5 5V19C5 20.1046 5.89543 21 7 21H17C18.1046 21 19 20.1046 19 19V5C19 3.89543 18.1046 3 17 3Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Folio
+                    </span>
                     <span class="details-value"><strong>{{ $travelRequest->folio }}</strong></span>
                 </div>
                 <div class="details-row">
-                    <span class="details-label">👤 Solicitante:</span>
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Solicitante
+                    </span>
                     <span class="details-value">{{ $travelRequest->user->name }}</span>
                 </div>
+                @if($travelRequest->user->branch)
                 <div class="details-row">
-                    <span class="details-label">🏢 Departamento:</span>
-                    <span class="details-value">{{ $travelRequest->user->department->name ?? 'N/A' }}</span>
-                </div>
-                <div class="details-row">
-                    <span class="details-label">🗓️ Fecha de Salida:</span>
-                    <span class="details-value">{{ $travelRequest->departure_date->format('d/m/Y') }}</span>
-                </div>
-                <div class="details-row">
-                    <span class="details-label">🏁 Fecha de Regreso:</span>
-                    <span class="details-value">{{ $travelRequest->return_date->format('d/m/Y') }}</span>
-                </div>
-                <div class="details-row">
-                    <span class="details-label">📍 Origen:</span>
-                    <span class="details-value">{{ $travelRequest->origin_city }}</span>
-                </div>
-                <div class="details-row">
-                    <span class="details-label">🎯 Destino:</span>
-                    <span class="details-value">{{ $travelRequest->destination_city }}</span>
-                </div>
-                @if($travelRequest->custom_expenses_data && is_array($travelRequest->custom_expenses_data) && count($travelRequest->custom_expenses_data) > 0)
-                <div class="details-row">
-                    <span class="details-label">💰 Gastos Personalizados:</span>
-                    <span class="details-value">{{ count($travelRequest->custom_expenses_data) }} concepto(s)</span>
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Departamento
+                    </span>
+                    <span class="details-value">{{ $travelRequest->user->branch->name }}</span>
                 </div>
                 @endif
                 <div class="details-row">
-                    <span class="details-label">📊 Estado:</span>
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Fecha de Salida
+                    </span>
+                    <span class="details-value">{{ $travelRequest->departure_date->format('d/m/Y') }}</span>
+                </div>
+                <div class="details-row">
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Fecha de Regreso
+                    </span>
+                    <span class="details-value">{{ $travelRequest->return_date->format('d/m/Y') }}</span>
+                </div>
+                @if($travelRequest->origin_city)
+                <div class="details-row">
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Origen
+                    </span>
+                    <span class="details-value">{{ $travelRequest->origin_city }}</span>
+                </div>
+                @endif
+                <div class="details-row">
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Destino
+                    </span>
+                    <span class="details-value">{{ $travelRequest->destination_city }}</span>
+                </div>
+                <div class="details-row">
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Estado
+                    </span>
                     <span class="details-value">
-                        <span class="status-badge">Pendiente de Autorización</span>
+                        <span class="status-badge">PENDIENTE DE AUTORIZACIÓN</span>
                     </span>
                 </div>
                 <div class="details-row">
-                    <span class="details-label">📅 Enviada el:</span>
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M12 8V12L15 15M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Enviada el
+                    </span>
                     <span class="details-value">{{ $travelRequest->submitted_at->format('d/m/Y H:i') }}</span>
                 </div>
             </div>
 
-            <div class="message">
-                <p>🎯 <strong>Motivo del viaje:</strong></p>
-                <p style="background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin-top: 10px;">
-                    {{ $travelRequest->trip_purpose ?: 'No especificado' }}
-                </p>
+            @if($travelRequest->purpose)
+            <div class="purpose-box">
+                <div class="purpose-label">
+                    <svg class="icon" style="display: inline-block; vertical-align: middle; margin-right: 4px;" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Motivo del viaje:
+                </div>
+                <div class="purpose-content">{{ $travelRequest->purpose }}</div>
             </div>
+            @endif
 
-            <div style="text-align: center; margin: 30px 0;">
-                <a href="{{ $viewUrl }}" class="cta-button">
-                    ✅ Revisar y Autorizar Solicitud
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="{{ $authorizationUrl }}" class="cta-button">
+                    ✓ Revisar y Autorizar Solicitud
                 </a>
             </div>
 
-            <div class="divider"></div>
-
-            <div class="message">
-                <p>📌 <strong>Opciones disponibles:</strong></p>
-                <ul style="color: #4b5563; padding-left: 20px;">
+            <div class="options-section">
+                <div class="options-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Opciones disponibles:
+                </div>
+                <ul class="options-list">
                     <li><strong>Aprobar:</strong> La solicitud continuará con el proceso de aprobación</li>
                     <li><strong>Rechazar:</strong> La solicitud será cancelada y el solicitante será notificado</li>
                     <li><strong>Poner en revisión:</strong> Solicitar cambios o aclaraciones al solicitante</li>
@@ -251,19 +373,16 @@
             </div>
 
             <div class="message">
-                <p>⏰ <strong>Importante:</strong> Esta solicitud requiere tu atención inmediata. Por favor, toma acción lo antes posible para no retrasar el proceso de viaje del colaborador.</p>
+                <p><strong>Nota:</strong> Esta solicitud requiere tu atención. El solicitante está a la espera de tu respuesta para poder continuar con los preparativos de su viaje.</p>
             </div>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <p><strong>{{ config('app.name') }}</strong></p>
+            <p><strong>GastosViajeGC</strong></p>
+            <p>Sistema de Gestión de Viajes</p>
             <p>Este correo fue enviado automáticamente desde nuestro sistema de gestión de viajes.</p>
-            <p>Por favor, no respondas a este correo. Si necesitas ayuda, contacta a tu administrador.</p>
-            <p style="margin-top: 20px; font-size: 12px; color: #9ca3af;">
-                © {{ date('Y') }} {{ config('app.name') }}. Todos los derechos reservados.<br>
-                Este mensaje es confidencial y está dirigido únicamente al destinatario.
-            </p>
+            <p>Por favor, no respondas a este correo.</p>
         </div>
     </div>
 </body>

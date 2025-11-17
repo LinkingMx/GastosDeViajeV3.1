@@ -8,18 +8,22 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class TravelRequestPendingAuthorizationMail extends Mailable
+class TravelRequestRejectedMail extends Mailable
 {
     use SerializesModels;
 
     public TravelRequest $travelRequest;
+    public string $rejectionReason;
+    public string $rejectorName;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(TravelRequest $travelRequest)
+    public function __construct(TravelRequest $travelRequest, string $rejectionReason, string $rejectorName)
     {
         $this->travelRequest = $travelRequest;
+        $this->rejectionReason = $rejectionReason;
+        $this->rejectorName = $rejectorName;
     }
 
     /**
@@ -28,7 +32,7 @@ class TravelRequestPendingAuthorizationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Solicitud de Viaje Pendiente de Autorización - ' . $this->travelRequest->folio,
+            subject: 'Solicitud de Viaje Rechazada - ' . $this->travelRequest->folio,
         );
     }
 
@@ -38,11 +42,12 @@ class TravelRequestPendingAuthorizationMail extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.travel-request-pending-authorization',
+            view: 'emails.travel-request-rejected',
             with: [
                 'travelRequest' => $this->travelRequest,
-                'authorizer' => $this->travelRequest->authorizer,
-                'authorizationUrl' => route('filament.admin.resources.travel-requests.edit', $this->travelRequest),
+                'rejectionReason' => $this->rejectionReason,
+                'rejectorName' => $this->rejectorName,
+                'viewUrl' => route('filament.admin.resources.travel-requests.view', $this->travelRequest),
             ],
         );
     }

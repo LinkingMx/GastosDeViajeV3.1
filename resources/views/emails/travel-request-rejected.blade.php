@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ config('app.name') }} - Solicitud de Viaje Pendiente de Autorización</title>
+    <title>{{ config('app.name') }} - Solicitud Rechazada</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -95,13 +95,13 @@
         .status-badge {
             display: inline-block;
             padding: 4px 12px;
-            border: 1px solid #897053;
+            border: 1px solid #dc2626;
             font-size: 11px;
             font-weight: 500;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            background-color: #f8f6f3;
-            color: #897053;
+            background-color: #fee2e2;
+            color: #991b1b;
         }
         .cta-button {
             display: inline-block;
@@ -138,11 +138,34 @@
             background-color: #e5e5e5;
             margin: 40px 0;
         }
-        .highlight-box {
-            background-color: #fafafa;
-            border-left: 3px solid #D4AF37;
+        .rejection-box {
+            background-color: #fee2e2;
+            border-left: 3px solid #dc2626;
             padding: 16px;
             margin: 20px 0;
+        }
+        .rejection-box p {
+            margin: 0;
+            color: #991b1b;
+            font-size: 14px;
+        }
+        .reason-box {
+            background-color: #fafafa;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .reason-box h3 {
+            margin: 0 0 12px 0;
+            font-size: 16px;
+            font-weight: 500;
+            color: #000000;
+        }
+        .reason-box p {
+            margin: 0;
+            color: #000000;
+            font-style: italic;
         }
         strong {
             font-weight: 500;
@@ -170,34 +193,24 @@
         <!-- Header -->
         <div class="header">
             <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMjAwIDYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDx0ZXh0IHg9IjEwMCIgeT0iMzgiIGZvbnQtZmFtaWx5PSJHYXJhbW9uZCwgVHJhamFuLCBUaW1lcyBOZXcgUm9tYW4sIHNlcmlmIiBmb250LXNpemU9IjMyIiBmb250LXdlaWdodD0iNTAwIiBmaWxsPSIjODk3MDUzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMiI+Q09TVEVOTzwvdGV4dD4KPC9zdmc+" alt="COSTENO Logo">
-            <h1>Solicitud Pendiente de Autorización</h1>
+            <h1>Solicitud Rechazada</h1>
         </div>
 
         <!-- Content -->
         <div class="content">
             <div class="greeting">
-                Estimado/a {{ $travelRequest->authorizer->name }},
+                Estimado/a {{ $travelRequest->user->name }},
             </div>
 
             <div class="message">
-                <p>Se ha recibido una solicitud de viaje que requiere su autorización.</p>
+                <p>Le informamos que su solicitud de viaje ha sido revisada y no ha sido autorizada.</p>
             </div>
 
-            <div class="highlight-box">
-                <p style="margin: 0;"><strong>Acción requerida:</strong> Autorización de solicitud de viaje</p>
+            <div class="rejection-box">
+                <p><strong>Su solicitud de viaje no ha sido aprobada en esta ocasión</strong></p>
             </div>
 
             <div class="details-box">
-                <div class="details-row">
-                    <span class="details-label">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Solicitante
-                    </span>
-                    <span class="details-value">{{ $travelRequest->user->name }}</span>
-                </div>
                 <div class="details-row">
                     <span class="details-label">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -210,21 +223,31 @@
                 <div class="details-row">
                     <span class="details-label">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        Periodo Solicitado
+                    </span>
+                    <span class="details-value">{{ $travelRequest->departure_date->format('d/m/Y') }} - {{ $travelRequest->return_date->format('d/m/Y') }}</span>
+                </div>
+                <div class="details-row">
+                    <span class="details-label">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                             <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        Destino
+                        Destino Solicitado
                     </span>
                     <span class="details-value">{{ $travelRequest->destination_city }}, {{ $travelRequest->destinationCountry->name }}</span>
                 </div>
                 <div class="details-row">
                     <span class="details-label">
                         <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M8 7V3M16 7V3M7 11H17M5 21H19C20.1046 21 21 20.1046 21 19V7C21 5.89543 20.1046 5 19 5H5C3.89543 5 3 5.89543 3 7V19C3 20.1046 3.89543 21 5 21Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M16 7C16 9.20914 14.2091 11 12 11C9.79086 11 8 9.20914 8 7C8 4.79086 9.79086 3 12 3C14.2091 3 16 4.79086 16 7Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                            <path d="M12 14C8.13401 14 5 17.134 5 21H19C19 17.134 15.866 14 12 14Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
-                        Periodo
+                        Rechazada por
                     </span>
-                    <span class="details-value">{{ $travelRequest->departure_date->format('d/m/Y') }} - {{ $travelRequest->return_date->format('d/m/Y') }}</span>
+                    <span class="details-value">{{ $rejectorName }}</span>
                 </div>
                 <div class="details-row">
                     <span class="details-label">
@@ -234,46 +257,29 @@
                         Estado
                     </span>
                     <span class="details-value">
-                        <span class="status-badge">@php
-                            echo match($travelRequest->status) {
-                                'draft' => 'Borrador',
-                                'pending' => 'Pendiente de Autorización',
-                                'approved' => 'Autorizada',
-                                'rejected' => 'Rechazada',
-                                'revision' => 'En Revisión',
-                                'travel_review' => 'En Revisión de Viajes',
-                                'travel_approved' => 'Aprobada Final',
-                                'travel_rejected' => 'Rechazada por Viajes',
-                                'pending_verification' => 'Por Comprobar',
-                                default => ucfirst($travelRequest->status)
-                            };
-                        @endphp</span>
+                        <span class="status-badge">Rechazada</span>
                     </span>
                 </div>
-                @if($travelRequest->purpose)
-                <div class="details-row">
-                    <span class="details-label">
-                        <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 6V18M12 6L8 10M12 6L16 10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                            <path d="M12 18C12 18 17 14 17 10C17 6 12 2 12 2C12 2 7 6 7 10C7 14 12 18 12 18Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        Motivo
-                    </span>
-                    <span class="details-value">{{ $travelRequest->purpose }}</span>
-                </div>
-                @endif
             </div>
 
+            @if($rejectionReason)
+            <div class="reason-box">
+                <h3>Motivo del Rechazo</h3>
+                <p>{{ $rejectionReason }}</p>
+            </div>
+            @endif
+
             <div style="text-align: center; margin: 40px 0;">
-                <a href="{{ route('filament.admin.resources.travel-requests.view', $travelRequest) }}" class="cta-button">
-                    Revisar y Autorizar Solicitud
+                <a href="{{ $viewUrl }}" class="cta-button">
+                    Ver Detalles de la Solicitud
                 </a>
             </div>
 
             <div class="divider"></div>
 
             <div class="message">
-                <p><strong>Nota:</strong> Esta solicitud requiere su autorización para continuar con el proceso. Por favor, revise los detalles y tome la acción correspondiente a la brevedad posible.</p>
+                <p><strong>Próximos Pasos:</strong></p>
+                <p>Si considera que necesita realizar un viaje similar, puede crear una nueva solicitud tomando en cuenta las observaciones proporcionadas. Si tiene dudas sobre el rechazo, puede comunicarse con su autorizador para mayor información.</p>
             </div>
         </div>
 
