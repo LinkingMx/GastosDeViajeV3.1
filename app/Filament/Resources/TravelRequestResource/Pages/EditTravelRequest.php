@@ -187,6 +187,13 @@ class EditTravelRequest extends EditRecord
                     ->label('Fecha Salida')
                     ->disabled($isDisabled)
                     ->required()
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
+                        $returnDate = $get('return_date');
+                        if ($state && $returnDate && $returnDate < $state) {
+                            $set('return_date', null);
+                        }
+                    })
                     ->validationMessages([
                         'required' => 'La fecha de salida es obligatoria.',
                         'before' => 'La fecha de salida debe ser anterior a la fecha de regreso.',
@@ -196,6 +203,7 @@ class EditTravelRequest extends EditRecord
                     ->label('Fecha Regreso')
                     ->disabled($isDisabled)
                     ->required()
+                    ->minDate(fn (Get $get) => $get('departure_date'))
                     ->validationMessages([
                         'required' => 'La fecha de regreso es obligatoria.',
                         'after' => 'La fecha de regreso debe ser posterior a la fecha de salida.',

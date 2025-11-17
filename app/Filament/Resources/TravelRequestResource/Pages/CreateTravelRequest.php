@@ -126,6 +126,13 @@ class CreateTravelRequest extends CreateRecord
                 DatePicker::make('departure_date')
                     ->label('Fecha Salida')
                     ->required()
+                    ->live()
+                    ->afterStateUpdated(function (Set $set, Get $get, ?string $state) {
+                        $returnDate = $get('return_date');
+                        if ($state && $returnDate && $returnDate < $state) {
+                            $set('return_date', null);
+                        }
+                    })
                     ->minDate(function () {
                         $config = \App\Models\GeneralSetting::get();
                         return now()->addDays($config->dias_minimos_anticipacion);
@@ -142,6 +149,7 @@ class CreateTravelRequest extends CreateRecord
                 DatePicker::make('return_date')
                     ->label('Fecha Regreso')
                     ->required()
+                    ->minDate(fn (Get $get) => $get('departure_date'))
                     ->validationMessages([
                         'required' => 'La fecha de regreso es obligatoria.',
                         'after' => 'La fecha de regreso debe ser posterior a la fecha de salida.',
