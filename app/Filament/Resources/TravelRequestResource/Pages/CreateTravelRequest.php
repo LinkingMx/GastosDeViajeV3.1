@@ -15,6 +15,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ViewField;
 use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
@@ -536,18 +537,19 @@ protected function getStepThreeSchema(): array
             ->schema([
                 Grid::make(['default' => 1, 'sm' => 2])
                     ->schema([
-                        Placeholder::make('requester')
+                        ViewField::make('requester')
                             ->label('Solicitante')
-                            ->content(fn () => new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>".auth()->user()->name."</span>"))
-                            ->html(),
-                        Placeholder::make('branch')
+                            ->view('filament.forms.components.badge-field', [
+                                'value' => auth()->user()->name,
+                            ]),
+                        ViewField::make('branch')
                             ->label('Centro de costo')
-                            ->content(function (Get $get) {
+                            ->view('filament.forms.components.badge-field')
+                            ->viewData(function (Get $get) {
                                 $branchId = $get('branch_id');
                                 $branchName = $branchId ? \App\Models\Branch::find($branchId)?->name : 'No asignado';
-                                return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$branchName}</span>");
-                            })
-                            ->html(),
+                                return ['value' => $branchName];
+                            }),
                     ]),
             ])
             ->collapsible(),
@@ -558,58 +560,53 @@ protected function getStepThreeSchema(): array
             ->schema([
                 Grid::make(['default' => 1, 'sm' => 2, 'lg' => 4])
                     ->schema([
-                        Placeholder::make('origin')
+                        ViewField::make('origin')
                             ->label('Origen')
-                            ->content(function (Get $get) {
+                            ->view('filament.forms.components.badge-field')
+                            ->viewData(function (Get $get) {
                                 $city = $get('origin_city');
                                 $countryId = $get('origin_country_id');
                                 $country = $countryId ? Country::find($countryId)?->name : '';
-                                $location = "{$city}, {$country}";
-                                return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$location}</span>");
-                            })
-                            ->html(),
-                        Placeholder::make('destination')
+                                return ['value' => "{$city}, {$country}"];
+                            }),
+                        ViewField::make('destination')
                             ->label('Destino')
-                            ->content(function (Get $get) {
+                            ->view('filament.forms.components.badge-field')
+                            ->viewData(function (Get $get) {
                                 $city = $get('destination_city');
                                 $countryId = $get('destination_country_id');
                                 $country = $countryId ? Country::find($countryId)?->name : '';
-                                $location = "{$city}, {$country}";
-                                return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$location}</span>");
-                            })
-                            ->html(),
-                        Placeholder::make('departure')
+                                return ['value' => "{$city}, {$country}"];
+                            }),
+                        ViewField::make('departure')
                             ->label('Fecha de Salida')
-                            ->content(function (Get $get) {
+                            ->view('filament.forms.components.badge-field')
+                            ->viewData(function (Get $get) {
                                 $date = $get('departure_date');
-                                $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
-                                return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$formattedDate}</span>");
-                            })
-                            ->html(),
-                        Placeholder::make('return')
+                                return ['value' => $date ? Carbon::parse($date)->format('d/m/Y') : ''];
+                            }),
+                        ViewField::make('return')
                             ->label('Fecha de Regreso')
-                            ->content(function (Get $get) {
+                            ->view('filament.forms.components.badge-field')
+                            ->viewData(function (Get $get) {
                                 $date = $get('return_date');
-                                $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
-                                return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$formattedDate}</span>");
-                            })
-                            ->html(),
+                                return ['value' => $date ? Carbon::parse($date)->format('d/m/Y') : ''];
+                            }),
                     ]),
-                Placeholder::make('duration')
+                ViewField::make('duration')
                     ->label('Duración del Viaje')
-                    ->content(function (Get $get) {
+                    ->view('filament.forms.components.badge-field')
+                    ->viewData(function (Get $get) {
                         $departureDate = $get('departure_date');
                         $returnDate = $get('return_date');
                         if ($departureDate && $returnDate) {
                             $departure = Carbon::parse($departureDate)->startOfDay();
                             $return = Carbon::parse($returnDate)->startOfDay();
                             $totalDays = max(1, $departure->diffInDays($return) + 1);
-                            $duration = $totalDays.($totalDays == 1 ? ' día' : ' días');
-                            return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$duration}</span>");
+                            return ['value' => $totalDays.($totalDays == 1 ? ' día' : ' días')];
                         }
-                        return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'>No calculado</span>");
+                        return ['value' => 'No calculado'];
                     })
-                    ->html()
                     ->columnSpanFull(),
             ])
             ->collapsible(),
