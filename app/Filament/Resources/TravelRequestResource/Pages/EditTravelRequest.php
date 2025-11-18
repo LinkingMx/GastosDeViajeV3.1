@@ -608,12 +608,13 @@ class EditTravelRequest extends EditRecord
                         ->schema([
                             Placeholder::make('requester')
                                 ->label('Solicitante')
-                                ->content(fn () => auth()->user()->name),
+                                ->content(fn () => new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>".auth()->user()->name."</span>")),
                             Placeholder::make('branch')
                                 ->label('Centro de costo')
                                 ->content(function (Get $get) {
                                     $branchId = $get('branch_id');
-                                    return $branchId ? \App\Models\Branch::find($branchId)?->name : 'No asignado';
+                                    $branchName = $branchId ? \App\Models\Branch::find($branchId)?->name : 'No asignado';
+                                    return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$branchName}</span>");
                                 }),
                         ]),
                 ])
@@ -631,7 +632,8 @@ class EditTravelRequest extends EditRecord
                                     $city = $get('origin_city');
                                     $countryId = $get('origin_country_id');
                                     $country = $countryId ? Country::find($countryId)?->name : '';
-                                    return "{$city}, {$country}";
+                                    $location = "{$city}, {$country}";
+                                    return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$location}</span>");
                                 }),
                             Placeholder::make('destination')
                                 ->label('Destino')
@@ -639,19 +641,22 @@ class EditTravelRequest extends EditRecord
                                     $city = $get('destination_city');
                                     $countryId = $get('destination_country_id');
                                     $country = $countryId ? Country::find($countryId)?->name : '';
-                                    return "{$city}, {$country}";
+                                    $location = "{$city}, {$country}";
+                                    return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$location}</span>");
                                 }),
                             Placeholder::make('departure')
                                 ->label('Fecha de Salida')
                                 ->content(function (Get $get) {
                                     $date = $get('departure_date');
-                                    return $date ? Carbon::parse($date)->format('d/m/Y') : '';
+                                    $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
+                                    return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$formattedDate}</span>");
                                 }),
                             Placeholder::make('return')
                                 ->label('Fecha de Regreso')
                                 ->content(function (Get $get) {
                                     $date = $get('return_date');
-                                    return $date ? Carbon::parse($date)->format('d/m/Y') : '';
+                                    $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
+                                    return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$formattedDate}</span>");
                                 }),
                         ]),
                     Placeholder::make('duration')
@@ -663,9 +668,10 @@ class EditTravelRequest extends EditRecord
                                 $departure = Carbon::parse($departureDate)->startOfDay();
                                 $return = Carbon::parse($returnDate)->startOfDay();
                                 $totalDays = max(1, $departure->diffInDays($return) + 1);
-                                return $totalDays.($totalDays == 1 ? ' día' : ' días');
+                                $duration = $totalDays.($totalDays == 1 ? ' día' : ' días');
+                                return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$duration}</span>");
                             }
-                            return 'No calculado';
+                            return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'>No calculado</span>");
                         })
                         ->columnSpanFull(),
                 ])
