@@ -259,6 +259,7 @@ Key `.env` variables:
 5. **Filament native components** - Always prefer native Filament components over custom JS/CSS
 6. **Form redirects** - Resources must redirect to list page after create/edit
 7. **Custom notifications** - Use icon + title + subtitle, primary color for icons
+8. **Git commits** - NEVER make git commits automatically. Always wait for explicit user authorization before committing changes
 
 ## Debugging Tips
 

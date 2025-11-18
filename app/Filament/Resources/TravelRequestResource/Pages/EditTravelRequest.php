@@ -17,7 +17,6 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Components\ViewField;
 use Filament\Forms\Components\Wizard;
 use Filament\Forms\Components\Wizard\Step;
 use Filament\Forms\Form;
@@ -607,18 +606,21 @@ class EditTravelRequest extends EditRecord
                 ->schema([
                     Grid::make(['default' => 1, 'sm' => 2])
                         ->schema([
-                            ViewField::make('requester')
+                            Placeholder::make('requester')
                                 ->label('Solicitante')
-                                ->view('filament.forms.components.badge-field', [
-                                    'value' => auth()->user()->name,
-                                ]),
-                            ViewField::make('branch')
+                                ->content(fn () => view('filament::components.badge', [
+                                    'color' => 'primary',
+                                    'slot' => auth()->user()->name,
+                                ])),
+                            Placeholder::make('branch')
                                 ->label('Centro de costo')
-                                ->view('filament.forms.components.badge-field')
-                                ->viewData(function (Get $get) {
+                                ->content(function (Get $get) {
                                     $branchId = $get('branch_id');
                                     $branchName = $branchId ? \App\Models\Branch::find($branchId)?->name : 'No asignado';
-                                    return ['value' => $branchName];
+                                    return view('filament::components.badge', [
+                                        'color' => 'primary',
+                                        'slot' => $branchName,
+                                    ]);
                                 }),
                         ]),
                 ])
@@ -630,52 +632,66 @@ class EditTravelRequest extends EditRecord
                 ->schema([
                     Grid::make(['default' => 1, 'sm' => 2, 'lg' => 4])
                         ->schema([
-                            ViewField::make('origin')
+                            Placeholder::make('origin')
                                 ->label('Origen')
-                                ->view('filament.forms.components.badge-field')
-                                ->viewData(function (Get $get) {
+                                ->content(function (Get $get) {
                                     $city = $get('origin_city');
                                     $countryId = $get('origin_country_id');
                                     $country = $countryId ? Country::find($countryId)?->name : '';
-                                    return ['value' => "{$city}, {$country}"];
+                                    return view('filament::components.badge', [
+                                        'color' => 'primary',
+                                        'slot' => "{$city}, {$country}",
+                                    ]);
                                 }),
-                            ViewField::make('destination')
+                            Placeholder::make('destination')
                                 ->label('Destino')
-                                ->view('filament.forms.components.badge-field')
-                                ->viewData(function (Get $get) {
+                                ->content(function (Get $get) {
                                     $city = $get('destination_city');
                                     $countryId = $get('destination_country_id');
                                     $country = $countryId ? Country::find($countryId)?->name : '';
-                                    return ['value' => "{$city}, {$country}"];
+                                    return view('filament::components.badge', [
+                                        'color' => 'primary',
+                                        'slot' => "{$city}, {$country}",
+                                    ]);
                                 }),
-                            ViewField::make('departure')
+                            Placeholder::make('departure')
                                 ->label('Fecha de Salida')
-                                ->view('filament.forms.components.badge-field')
-                                ->viewData(function (Get $get) {
+                                ->content(function (Get $get) {
                                     $date = $get('departure_date');
-                                    return ['value' => $date ? Carbon::parse($date)->format('d/m/Y') : ''];
+                                    $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
+                                    return view('filament::components.badge', [
+                                        'color' => 'primary',
+                                        'slot' => $formattedDate,
+                                    ]);
                                 }),
-                            ViewField::make('return')
+                            Placeholder::make('return')
                                 ->label('Fecha de Regreso')
-                                ->view('filament.forms.components.badge-field')
-                                ->viewData(function (Get $get) {
+                                ->content(function (Get $get) {
                                     $date = $get('return_date');
-                                    return ['value' => $date ? Carbon::parse($date)->format('d/m/Y') : ''];
+                                    $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
+                                    return view('filament::components.badge', [
+                                        'color' => 'primary',
+                                        'slot' => $formattedDate,
+                                    ]);
                                 }),
                         ]),
-                    ViewField::make('duration')
+                    Placeholder::make('duration')
                         ->label('Duración del Viaje')
-                        ->view('filament.forms.components.badge-field')
-                        ->viewData(function (Get $get) {
+                        ->content(function (Get $get) {
                             $departureDate = $get('departure_date');
                             $returnDate = $get('return_date');
                             if ($departureDate && $returnDate) {
                                 $departure = Carbon::parse($departureDate)->startOfDay();
                                 $return = Carbon::parse($returnDate)->startOfDay();
                                 $totalDays = max(1, $departure->diffInDays($return) + 1);
-                                return ['value' => $totalDays.($totalDays == 1 ? ' día' : ' días')];
+                                $duration = $totalDays.($totalDays == 1 ? ' día' : ' días');
+                            } else {
+                                $duration = 'No calculado';
                             }
-                            return ['value' => 'No calculado'];
+                            return view('filament::components.badge', [
+                                'color' => 'primary',
+                                'slot' => $duration,
+                            ]);
                         })
                         ->columnSpanFull(),
                 ])
