@@ -685,39 +685,19 @@ protected function getStepThreeSchema(): array
                                     $notes = $get("per_diem_data.{$perDiem->id}.notes") ?: 'Sin notas';
 
                                     $rows .= "
-                                        <div class='mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden'>
-                                            <div class='p-6'>
-                                                <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6'>
-                                                    <div class='flex-1 min-w-0'>
-                                                        <div class='flex items-start gap-3 mb-3'>
-                                                            <div class='flex-shrink-0 w-10 h-10 bg-success-100 dark:bg-success-900/30 rounded-lg flex items-center justify-center'>
-                                                                <svg class='w-5 h-5 text-success-600 dark:text-success-400' fill='currentColor' viewBox='0 0 20 20'>
-                                                                    <path d='M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z'></path>
-                                                                </svg>
-                                                            </div>
-                                                            <div class='flex-1 min-w-0'>
-                                                                <h4 class='font-bold text-lg text-gray-900 dark:text-white mb-1'>{$name}</h4>
-                                                                ".($concept ? "<p class='text-sm text-gray-600 dark:text-gray-400 font-medium'>{$concept}</p>" : '')."
-                                                            </div>
-                                                        </div>
-                                                        <div class='bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 mt-4'>
-                                                            <p class='text-sm text-gray-700 dark:text-gray-300'><span class='font-semibold text-gray-900 dark:text-white'>Notas:</span> {$notes}</p>
-                                                        </div>
+                                        <div class='mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                            <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4'>
+                                                <div class='flex-1'>
+                                                    <h4 class='text-base font-semibold text-gray-900 dark:text-white mb-1'>{$name}</h4>
+                                                    ".($concept ? "<p class='text-sm text-gray-600 dark:text-gray-400 mb-2'>({$concept})</p>" : '')."
+                                                    <p class='text-sm text-gray-600 dark:text-gray-400'>{$notes}</p>
+                                                </div>
+                                                <div class='flex flex-col gap-2 sm:text-right sm:min-w-[200px]'>
+                                                    <div class='text-sm text-gray-600 dark:text-gray-400'>
+                                                        $".number_format($perDiem->amount, 2)." × {$totalDays} días
                                                     </div>
-                                                    <div class='flex flex-col items-end gap-3 sm:min-w-[200px] border-l-0 sm:border-l-2 border-gray-200 dark:border-gray-700 sm:pl-6'>
-                                                        <div class='text-right w-full'>
-                                                            <div class='text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1'>Cálculo</div>
-                                                            <div class='inline-flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-4 py-2 rounded-lg'>
-                                                                <span class='font-bold text-gray-900 dark:text-white'>$".number_format($perDiem->amount, 2)."</span>
-                                                                <span class='text-gray-400'>×</span>
-                                                                <span class='font-bold text-gray-900 dark:text-white'>{$totalDays}</span>
-                                                                <span class='text-sm text-gray-500 dark:text-gray-400'>días</span>
-                                                            </div>
-                                                        </div>
-                                                        <div class='text-right w-full'>
-                                                            <div class='text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1'>Total</div>
-                                                            <div class='text-3xl font-bold text-success-600 dark:text-success-400'>$".number_format($amount, 2)."</div>
-                                                        </div>
+                                                    <div class='text-xl font-semibold text-gray-900 dark:text-white'>
+                                                        $".number_format($amount, 2)."
                                                     </div>
                                                 </div>
                                             </div>
@@ -728,25 +708,10 @@ protected function getStepThreeSchema(): array
 
                             if ($rows) {
                                 $rows .= "
-                                    <div class='mt-8 bg-gradient-to-br from-success-50 via-success-100 to-success-50 dark:from-success-900/30 dark:via-success-900/20 dark:to-success-900/30 rounded-2xl border-2 border-success-300 dark:border-success-700 shadow-lg overflow-hidden'>
-                                        <div class='p-8'>
-                                            <div class='flex flex-col sm:flex-row justify-between items-center gap-4'>
-                                                <div class='flex items-center gap-3'>
-                                                    <div class='w-12 h-12 bg-success-600 dark:bg-success-500 rounded-xl flex items-center justify-center shadow-md'>
-                                                        <svg class='w-6 h-6 text-white' fill='currentColor' viewBox='0 0 20 20'>
-                                                            <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z' clip-rule='evenodd'></path>
-                                                        </svg>
-                                                    </div>
-                                                    <div>
-                                                        <div class='text-xs font-semibold text-success-700 dark:text-success-300 uppercase tracking-wide'>Subtotal</div>
-                                                        <div class='text-xl font-bold text-gray-900 dark:text-white'>Viáticos Estándar</div>
-                                                    </div>
-                                                </div>
-                                                <div class='text-center sm:text-right'>
-                                                    <div class='text-5xl font-black text-success-600 dark:text-success-400 tracking-tight'>$".number_format($total, 2)."</div>
-                                                    <div class='text-sm text-success-700 dark:text-success-300 font-medium mt-1'>MXN</div>
-                                                </div>
-                                            </div>
+                                    <div class='mt-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                        <div class='flex justify-between items-center'>
+                                            <span class='text-base font-semibold text-gray-900 dark:text-white'>Subtotal Viáticos:</span>
+                                            <span class='text-2xl font-semibold text-gray-900 dark:text-white'>$".number_format($total, 2)."</span>
                                         </div>
                                     </div>
                                 ";
@@ -804,29 +769,15 @@ protected function getStepThreeSchema(): array
                                     $justification = $expense['justification'] ?? 'Sin justificación';
 
                                     $rows .= "
-                                        <div class='mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-200 overflow-hidden'>
-                                            <div class='p-6'>
-                                                <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-6'>
-                                                    <div class='flex-1 min-w-0'>
-                                                        <div class='flex items-start gap-3 mb-3'>
-                                                            <div class='flex-shrink-0 w-10 h-10 bg-danger-100 dark:bg-danger-900/30 rounded-lg flex items-center justify-center'>
-                                                                <svg class='w-5 h-5 text-danger-600 dark:text-danger-400' fill='currentColor' viewBox='0 0 20 20'>
-                                                                    <path d='M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z'></path>
-                                                                </svg>
-                                                            </div>
-                                                            <div class='flex-1 min-w-0'>
-                                                                <h4 class='font-bold text-lg text-gray-900 dark:text-white mb-1'>{$concept}</h4>
-                                                            </div>
-                                                        </div>
-                                                        <div class='bg-gray-50 dark:bg-gray-900/50 rounded-lg p-4 mt-4'>
-                                                            <p class='text-sm text-gray-700 dark:text-gray-300'><span class='font-semibold text-gray-900 dark:text-white'>Justificación:</span> {$justification}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div class='flex flex-col items-end gap-3 sm:min-w-[200px] border-l-0 sm:border-l-2 border-gray-200 dark:border-gray-700 sm:pl-6'>
-                                                        <div class='text-right w-full'>
-                                                            <div class='text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1'>Monto</div>
-                                                            <div class='text-3xl font-bold text-danger-600 dark:text-danger-400'>$".number_format($amount, 2)."</div>
-                                                        </div>
+                                        <div class='mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                            <div class='flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4'>
+                                                <div class='flex-1'>
+                                                    <h4 class='text-base font-semibold text-gray-900 dark:text-white mb-2'>{$concept}</h4>
+                                                    <p class='text-sm text-gray-600 dark:text-gray-400'>{$justification}</p>
+                                                </div>
+                                                <div class='flex flex-col gap-2 sm:text-right sm:min-w-[200px]'>
+                                                    <div class='text-xl font-semibold text-gray-900 dark:text-white'>
+                                                        $".number_format($amount, 2)."
                                                     </div>
                                                 </div>
                                             </div>
@@ -837,25 +788,10 @@ protected function getStepThreeSchema(): array
 
                             if ($rows) {
                                 $rows .= "
-                                    <div class='mt-8 bg-gradient-to-br from-danger-50 via-danger-100 to-danger-50 dark:from-danger-900/30 dark:via-danger-900/20 dark:to-danger-900/30 rounded-2xl border-2 border-danger-300 dark:border-danger-700 shadow-lg overflow-hidden'>
-                                        <div class='p-8'>
-                                            <div class='flex flex-col sm:flex-row justify-between items-center gap-4'>
-                                                <div class='flex items-center gap-3'>
-                                                    <div class='w-12 h-12 bg-danger-600 dark:bg-danger-500 rounded-xl flex items-center justify-center shadow-md'>
-                                                        <svg class='w-6 h-6 text-white' fill='currentColor' viewBox='0 0 20 20'>
-                                                            <path fill-rule='evenodd' d='M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z' clip-rule='evenodd'></path>
-                                                        </svg>
-                                                    </div>
-                                                    <div>
-                                                        <div class='text-xs font-semibold text-danger-700 dark:text-danger-300 uppercase tracking-wide'>Subtotal</div>
-                                                        <div class='text-xl font-bold text-gray-900 dark:text-white'>Gastos Personalizados</div>
-                                                    </div>
-                                                </div>
-                                                <div class='text-center sm:text-right'>
-                                                    <div class='text-5xl font-black text-danger-600 dark:text-danger-400 tracking-tight'>$".number_format($total, 2)."</div>
-                                                    <div class='text-sm text-danger-700 dark:text-danger-300 font-medium mt-1'>MXN</div>
-                                                </div>
-                                            </div>
+                                    <div class='mt-6 p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-gray-200 dark:border-gray-700'>
+                                        <div class='flex justify-between items-center'>
+                                            <span class='text-base font-semibold text-gray-900 dark:text-white'>Subtotal Gastos Personalizados:</span>
+                                            <span class='text-2xl font-semibold text-gray-900 dark:text-white'>$".number_format($total, 2)."</span>
                                         </div>
                                     </div>
                                 ";
