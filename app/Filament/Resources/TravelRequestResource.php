@@ -85,7 +85,7 @@ class TravelRequestResource extends Resource
                         'travel_review' => 'info',
                         'travel_approved' => 'success',
                         'travel_rejected' => 'danger',
-                        'pending_verification' => 'purple',
+                        'pending_verification' => 'info',
                         default => 'gray',
                     }),
 
@@ -117,7 +117,7 @@ class TravelRequestResource extends Resource
                             'travel_review' => 'info',
                             'travel_approved' => 'success',
                             'travel_rejected' => 'danger',
-                            'pending_verification' => 'purple',
+                            'pending_verification' => 'info',
                             default => 'gray',
                         };
                     })
