@@ -538,14 +538,16 @@ protected function getStepThreeSchema(): array
                     ->schema([
                         Placeholder::make('requester')
                             ->label('Solicitante')
-                            ->content(fn () => new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>".auth()->user()->name."</span>")),
+                            ->content(fn () => new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>".auth()->user()->name."</span>"))
+                            ->html(),
                         Placeholder::make('branch')
                             ->label('Centro de costo')
                             ->content(function (Get $get) {
                                 $branchId = $get('branch_id');
                                 $branchName = $branchId ? \App\Models\Branch::find($branchId)?->name : 'No asignado';
                                 return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$branchName}</span>");
-                            }),
+                            })
+                            ->html(),
                     ]),
             ])
             ->collapsible(),
@@ -564,7 +566,8 @@ protected function getStepThreeSchema(): array
                                 $country = $countryId ? Country::find($countryId)?->name : '';
                                 $location = "{$city}, {$country}";
                                 return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$location}</span>");
-                            }),
+                            })
+                            ->html(),
                         Placeholder::make('destination')
                             ->label('Destino')
                             ->content(function (Get $get) {
@@ -573,21 +576,24 @@ protected function getStepThreeSchema(): array
                                 $country = $countryId ? Country::find($countryId)?->name : '';
                                 $location = "{$city}, {$country}";
                                 return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$location}</span>");
-                            }),
+                            })
+                            ->html(),
                         Placeholder::make('departure')
                             ->label('Fecha de Salida')
                             ->content(function (Get $get) {
                                 $date = $get('departure_date');
                                 $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
                                 return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$formattedDate}</span>");
-                            }),
+                            })
+                            ->html(),
                         Placeholder::make('return')
                             ->label('Fecha de Regreso')
                             ->content(function (Get $get) {
                                 $date = $get('return_date');
                                 $formattedDate = $date ? Carbon::parse($date)->format('d/m/Y') : '';
                                 return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-300'>{$formattedDate}</span>");
-                            }),
+                            })
+                            ->html(),
                     ]),
                 Placeholder::make('duration')
                     ->label('Duración del Viaje')
@@ -603,6 +609,7 @@ protected function getStepThreeSchema(): array
                         }
                         return new HtmlString("<span class='inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300'>No calculado</span>");
                     })
+                    ->html()
                     ->columnSpanFull(),
             ])
             ->collapsible(),
