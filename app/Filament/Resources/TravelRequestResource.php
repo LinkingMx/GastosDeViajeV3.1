@@ -13,6 +13,11 @@ use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ViewColumn;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section as InfolistSection;
+use Filament\Infolists\Components\Actions as InfolistActions;
+use Filament\Infolists\Components\Actions\Action as InfolistAction;
 
 class TravelRequestResource extends Resource
 {
@@ -518,77 +523,62 @@ class TravelRequestResource extends Resource
                         ->visible(fn ($record) => $record && $record->attachments()->count() > 0)
                         ->modalHeading(fn ($record) => 'Archivos Adjuntos - '.$record->folio)
                         ->modalWidth('4xl')
-                        ->modalContent(function ($record) {
-                            $attachments = $record->attachments()->with('uploader')->get();
-                            $content = '<div class="space-y-4">';
+                        ->infolist([
+                            RepeatableEntry::make('attachments')
+                                ->label('')
+                                ->schema([
+                                    InfolistSection::make()
+                                        ->schema([
+                                            // Tipo de archivo
+                                            TextEntry::make('attachmentType.name')
+                                                ->label('Tipo de Archivo')
+                                                ->badge()
+                                                ->color('info')
+                                                ->size(TextEntry\TextEntrySize::Large)
+                                                ->weight('semibold'),
 
-                            foreach ($attachments as $attachment) {
-                                $typeLabel = $attachment->attachmentType?->name ?? 'Documento';
+                                            // Información de subida
+                                            TextEntry::make('uploader.name')
+                                                ->label('Subido por')
+                                                ->icon('heroicon-o-user')
+                                                ->formatStateUsing(fn ($record) =>
+                                                    $record->uploader->name .
+                                                    ' el ' .
+                                                    $record->created_at->format('d/m/Y \a \l\a\s H:i')
+                                                ),
 
-                                $fileSize = $attachment->file_size;
-                                if ($fileSize >= 1048576) {
-                                    $formattedSize = number_format($fileSize / 1048576, 2).' MB';
-                                } elseif ($fileSize >= 1024) {
-                                    $formattedSize = number_format($fileSize / 1024, 2).' KB';
-                                } else {
-                                    $formattedSize = $fileSize.' bytes';
-                                }
+                                            // Nombre del archivo y tamaño
+                                            TextEntry::make('file_name')
+                                                ->label('Archivo')
+                                                ->icon('heroicon-o-document')
+                                                ->formatStateUsing(fn ($record) =>
+                                                    $record->file_name . ' (' . $record->formatted_file_size . ')'
+                                                ),
 
-                                $downloadUrl = $attachment->download_url;
+                                            // Descripción (condicional)
+                                            TextEntry::make('description')
+                                                ->label('Descripción')
+                                                ->visible(fn ($record) => !empty($record->description))
+                                                ->icon('heroicon-o-information-circle')
+                                                ->color('gray'),
 
-                                $content .= '
-                                <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <!-- Tipo de archivo - MÁS IMPORTANTE -->
-                                            <div class="flex items-center mb-2">
-                                                <span class="inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold bg-blue-100 text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-                                                    '.$typeLabel.'
-                                                </span>
-                                            </div>
-                                            
-                                            <!-- Información de subida - IMPORTANCIA MEDIA -->
-                                            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">
-                                                Subido por <span class="font-medium">'.htmlspecialchars($attachment->uploader->name).'</span> el '.$attachment->created_at->format('d/m/Y \a \l\a\s H:i').'
-                                            </div>
-                                            
-                                            <!-- Nombre del archivo - MENOS IMPORTANTE -->
-                                            <div class="text-xs text-gray-500 dark:text-gray-500">
-                                                📄 '.htmlspecialchars($attachment->file_name).' ('.$formattedSize.')
-                                            </div>';
-
-                                if ($attachment->description) {
-                                    $content .= '<div class="text-sm text-gray-600 dark:text-gray-300 mt-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
-                                        <span class="font-medium">Descripción:</span> '.htmlspecialchars($attachment->description).'
-                                    </div>';
-                                }
-
-                                $content .= '
-                                        </div>
-                                        <div class="flex flex-col space-y-2">
-                                            <a href="'.$downloadUrl.'" 
-                                               target="_blank"
-                                               class="inline-flex items-center justify-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600">
-                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                                                </svg>
-                                                Descargar
-                                            </a>
-                                        </div>
-                                    </div>
-                                </div>';
-                            }
-
-                            $content .= '</div>';
-
-                            return new \Illuminate\Support\HtmlString($content);
-                        })
-                        ->modalActions([
-                            \Filament\Actions\Action::make('close')
-                                ->label('Cerrar')
-                                ->color('gray')
-                                ->close(),
-                        ]),
+                                            // Botón de descarga
+                                            InfolistActions::make([
+                                                InfolistAction::make('download')
+                                                    ->label('Descargar Archivo')
+                                                    ->icon('heroicon-o-arrow-down-tray')
+                                                    ->color('primary')
+                                                    ->url(fn ($record) => $record->download_url)
+                                                    ->openUrlInNewTab()
+                                            ])
+                                        ])
+                                        ->columns(1)
+                                ])
+                                ->contained(true)
+                                ->grid(1)
+                        ])
+                        ->modalCancelAction(false)
+                        ->modalSubmitAction(false),
 
                     Tables\Actions\Action::make('delete_attachment')
                         ->label('Eliminar Archivo')
