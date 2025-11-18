@@ -195,7 +195,7 @@
     <div class="container">
         <!-- Header -->
         <div class="header">
-            <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjYwIiB2aWV3Qm94PSIwIDAgMjAwIDYwIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgogIDx0ZXh0IHg9IjEwMCIgeT0iMzgiIGZvbnQtZmFtaWx5PSJHYXJhbW9uZCwgVHJhamFuLCBUaW1lcyBOZXcgUm9tYW4sIHNlcmlmIiBmb250LXNpemU9IjMyIiBmb250LXdlaWdodD0iNTAwIiBmaWxsPSIjODk3MDUzIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBsZXR0ZXItc3BhY2luZz0iMiI+Q09TVEVOTzwvdGV4dD4KPC9zdmc+" alt="COSTENO Logo">
+            <img src="{{ url('/images/costeno_logo.svg') }}" alt="COSTENO Logo">
             <h1>Viaje Aprobado</h1>
         </div>
 
