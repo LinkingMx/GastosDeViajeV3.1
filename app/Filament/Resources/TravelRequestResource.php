@@ -547,14 +547,6 @@ class TravelRequestResource extends Resource
                                                     $record->created_at->format('d/m/Y \a \l\a\s H:i')
                                                 ),
 
-                                            // Nombre del archivo y tamaño
-                                            TextEntry::make('file_name')
-                                                ->label('Archivo')
-                                                ->icon('heroicon-o-document')
-                                                ->formatStateUsing(fn ($record) =>
-                                                    $record->file_name . ' (' . $record->formatted_file_size . ')'
-                                                ),
-
                                             // Descripción (condicional)
                                             TextEntry::make('description')
                                                 ->label('Descripción')
