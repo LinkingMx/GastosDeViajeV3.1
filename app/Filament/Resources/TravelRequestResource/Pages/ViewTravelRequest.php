@@ -319,19 +319,12 @@ class ViewTravelRequest extends ViewRecord
                 RepeatableEntry::make('attachments')
                     ->label('')
                     ->schema([
-                        Grid::make(['default' => 1, 'md' => 2])
-                            ->schema([
-                                TextEntry::make('file_name')
-                                    ->label('Archivo')
-                                    ->icon('heroicon-o-document')
-                                    ->weight('bold')
-                                    ->size(TextEntry\TextEntrySize::Large),
-
-                                TextEntry::make('attachmentType.name')
-                                    ->label('Tipo de Documento')
-                                    ->badge()
-                                    ->color('info'),
-                            ]),
+                        TextEntry::make('attachmentType.name')
+                            ->label('Tipo de Documento')
+                            ->badge()
+                            ->color('info')
+                            ->size(TextEntry\TextEntrySize::Large)
+                            ->weight('bold'),
 
                         Grid::make(['default' => 1, 'sm' => 2, 'lg' => 4])
                             ->schema([
