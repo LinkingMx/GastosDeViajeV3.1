@@ -154,7 +154,7 @@ class ViewTravelRequest extends ViewRecord
                             ->color('primary'),
                     ]),
 
-                TextEntry::make('departure_date')
+                TextEntry::make('id')
                     ->label('Duración del Viaje')
                     ->formatStateUsing(function ($state, $record) {
                         if ($record->departure_date && $record->return_date) {
