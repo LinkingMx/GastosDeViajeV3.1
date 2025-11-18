@@ -30,7 +30,7 @@ class TravelRequestAdvanceDepositMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '💰 Anticipo Depositado - ' . $this->travelRequest->folio,
+            subject: 'Anticipo Depositado - ' . $this->travelRequest->folio,
         );
     }
 

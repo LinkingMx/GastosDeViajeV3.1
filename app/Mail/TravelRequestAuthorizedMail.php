@@ -28,7 +28,7 @@ class TravelRequestAuthorizedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '✅ Solicitud de Viaje Autorizada - ' . $this->travelRequest->folio,
+            subject: 'Solicitud de Viaje Autorizada - ' . $this->travelRequest->folio,
         );
     }
 

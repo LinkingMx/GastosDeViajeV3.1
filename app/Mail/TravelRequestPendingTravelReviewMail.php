@@ -28,7 +28,7 @@ class TravelRequestPendingTravelReviewMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🔍 Nueva Solicitud para Revisión de Viajes - ' . $this->travelRequest->folio,
+            subject: 'Nueva Solicitud para Revisión de Viajes - ' . $this->travelRequest->folio,
         );
     }
 

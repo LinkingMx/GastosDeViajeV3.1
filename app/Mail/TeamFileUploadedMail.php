@@ -52,7 +52,7 @@ class TeamFileUploadedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '📄 Nuevo Archivo Adjunto - '.$this->travelRequest->folio,
+            subject: 'Nuevo Archivo Adjunto - '.$this->travelRequest->folio,
         );
     }
 

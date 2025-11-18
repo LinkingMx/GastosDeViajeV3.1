@@ -50,7 +50,7 @@ class TeamFileDeletedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🗑️ Archivo Eliminado - '.$this->travelRequest->folio,
+            subject: 'Archivo Eliminado - '.$this->travelRequest->folio,
         );
     }
 

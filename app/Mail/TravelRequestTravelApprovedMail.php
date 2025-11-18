@@ -28,7 +28,7 @@ class TravelRequestTravelApprovedMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: '🎉 Viaje Aprobado Final - ' . $this->travelRequest->folio,
+            subject: 'Viaje Aprobado Final - ' . $this->travelRequest->folio,
         );
     }
 
