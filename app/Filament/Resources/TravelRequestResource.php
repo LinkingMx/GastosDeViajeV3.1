@@ -515,7 +515,7 @@ class TravelRequestResource extends Resource
                         ->label('Ver Archivos')
                         ->icon('heroicon-o-folder')
                         ->color('gray')
-                        ->visible(fn ($record) => $record && $record->status === 'travel_approved' && $record->attachments()->count() > 0)
+                        ->visible(fn ($record) => $record && $record->attachments()->count() > 0)
                         ->modalHeading(fn ($record) => 'Archivos Adjuntos - '.$record->folio)
                         ->modalWidth('4xl')
                         ->modalContent(function ($record) {
