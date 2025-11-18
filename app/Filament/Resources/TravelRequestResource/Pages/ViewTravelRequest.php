@@ -190,17 +190,18 @@ class ViewTravelRequest extends ViewRecord
         return Section::make('Servicios Administrados Solicitados')
             ->icon('heroicon-o-check-circle')
             ->schema([
-                TextEntry::make('additional_services')
+                TextEntry::make('id')
                     ->label('')
                     ->formatStateUsing(function ($state, $record) {
                         $managedServices = \App\Models\ExpenseConcept::where('is_unmanaged', false)->get();
                         $requestedServices = [];
+                        $additionalServices = $record->additional_services ?? [];
 
                         foreach ($managedServices as $service) {
-                            if (isset($state[$service->id]) && ($state[$service->id]['enabled'] ?? false)) {
+                            if (isset($additionalServices[$service->id]) && ($additionalServices[$service->id]['enabled'] ?? false)) {
                                 $requestedServices[] = [
                                     'name' => $service->name,
-                                    'notes' => $state[$service->id]['notes'] ?? 'Se procesará de manera estándar.',
+                                    'notes' => $additionalServices[$service->id]['notes'] ?? 'Se procesará de manera estándar.',
                                 ];
                             }
                         }
@@ -241,7 +242,7 @@ class ViewTravelRequest extends ViewRecord
         return Section::make('Viáticos Estándar')
             ->icon('heroicon-o-banknotes')
             ->schema([
-                TextEntry::make('per_diem_data')
+                TextEntry::make('id')
                     ->label('')
                     ->formatStateUsing(function ($state, $record) {
                         return $this->renderPerDiemsTable($record);
@@ -257,10 +258,10 @@ class ViewTravelRequest extends ViewRecord
         return Section::make('Gastos Personalizados')
             ->icon('heroicon-o-currency-dollar')
             ->schema([
-                TextEntry::make('custom_expenses_data')
+                TextEntry::make('id')
                     ->label('')
-                    ->formatStateUsing(function ($state) {
-                        return $this->renderCustomExpensesTable($state);
+                    ->formatStateUsing(function ($state, $record) {
+                        return $this->renderCustomExpensesTable($record->custom_expenses_data);
                     })
                     ->columnSpanFull(),
             ])
