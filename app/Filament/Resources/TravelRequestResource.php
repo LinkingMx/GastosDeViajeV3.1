@@ -706,9 +706,42 @@ class TravelRequestResource extends Resource
                                 ->prefix('$')
                                 ->step(0.01)
                                 ->minValue(0)
+                                ->default(function ($record) {
+                                    if (!$record) return 0;
+
+                                    // Calculate per diem total
+                                    $perDiemTotal = 0;
+                                    $perDiemData = $record->per_diem_data ?? [];
+                                    $departureDate = $record->departure_date;
+                                    $returnDate = $record->return_date;
+
+                                    if ($departureDate && $returnDate) {
+                                        $totalDays = max(1, $departureDate->diffInDays($returnDate) + 1);
+
+                                        foreach ($perDiemData as $perDiemId => $data) {
+                                            if ($data['enabled'] ?? false) {
+                                                $perDiem = \App\Models\PerDiem::find($perDiemId);
+                                                if ($perDiem) {
+                                                    $perDiemTotal += $totalDays * $perDiem->amount;
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Calculate custom expenses total
+                                    $customExpensesTotal = 0;
+                                    $customExpensesData = $record->custom_expenses_data ?? [];
+                                    foreach ($customExpensesData as $expense) {
+                                        if (!empty($expense['amount'])) {
+                                            $customExpensesTotal += floatval($expense['amount']);
+                                        }
+                                    }
+
+                                    return $perDiemTotal + $customExpensesTotal;
+                                })
                                 ->placeholder('0.00')
                                 ->required()
-                                ->helperText('Ingresa el monto exacto depositado'),
+                                ->helperText('Monto total calculado automáticamente. Puedes modificarlo si es necesario.'),
                             \Filament\Forms\Components\Textarea::make('advance_deposit_notes')
                                 ->label('Notas del Depósito')
                                 ->placeholder('Referencia, número de transferencia, banco, etc.')
