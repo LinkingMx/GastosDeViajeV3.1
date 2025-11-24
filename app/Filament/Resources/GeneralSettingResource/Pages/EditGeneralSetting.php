@@ -53,7 +53,7 @@ class EditGeneralSetting extends Page implements HasForms
                             ->prefixIcon('heroicon-o-user-circle')
                             ->placeholder('Selecciona un usuario')
                             ->helperText('Usuario responsable de aprobar comprobaciones que excedan el monto límite estándar')
-                            ->relationship('autorizadorMayor', 'name')
+                            ->options(\App\Models\User::pluck('name', 'id'))
                             ->searchable()
                             ->preload()
                             ->nullable(),
