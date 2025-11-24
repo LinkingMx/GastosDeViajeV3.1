@@ -28,6 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            ->passwordReset()
             ->brandLogo(fn () => view('filament.admin.logo'))
             ->font('Raleway')
             ->colors([
